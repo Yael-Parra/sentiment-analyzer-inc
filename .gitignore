@@ -1,0 +1,6 @@
+# node modules
+node_modules
+
+#OS específicos,
+.DS_Store
+Thumbs.db
