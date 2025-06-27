@@ -29,3 +29,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+etl/youtube_comments.csv
+.env
+.venv
