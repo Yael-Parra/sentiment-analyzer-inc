@@ -31,3 +31,4 @@ dist-ssr
 *.sw?
 .venv
 etl/youtube_comments.csv
+.env
