@@ -1,0 +1,10 @@
+dotenv
+numpy
+pandas
+postgrest
+pydantic
+pydantic_core
+python-dotenv
+supabase
+requests
+websockets
