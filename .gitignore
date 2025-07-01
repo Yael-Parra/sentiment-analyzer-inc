@@ -1,7 +1,7 @@
-# node modules
+# Node modules
 node_modules
 
-#OS específicos,
+# OS específicos
 .DS_Store
 Thumbs.db
 
@@ -14,16 +14,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
+# Build outputs
 dist
 dist-ssr
 *.local
+
+# Python
+venv/
+__pycache__/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
