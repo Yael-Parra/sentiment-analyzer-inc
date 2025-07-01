@@ -1,3 +1,8 @@
+# UV 
+.python-version
+pyproject.toml
+uv.lock
+
 # node modules
 node_modules
 
