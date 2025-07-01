@@ -1,0 +1,15 @@
+gdown
+jupyter
+matplotlib
+notebook
+numpy
+openpyxl
+pandas
+requests
+scikit-learn
+seaborn
+torch
+tqdm
+transformers
+wordcloud
+sentencepiece
