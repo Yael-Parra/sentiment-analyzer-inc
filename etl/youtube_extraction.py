@@ -34,7 +34,7 @@ def fetch_video_metadata(video_id, api_key):
     print(f"✅ Metadatos obtenidos para video {video_id}")
     return items[0]
 
-def fetch_comment_threads(video_id, max_total=1000, delay=1):
+def fetch_comment_threads(video_id, max_total=100000, delay=1):
     print(f"▶️ Iniciando extracción de comentarios para video {video_id}")
     url = "https://www.googleapis.com/youtube/v3/commentThreads"
     comments = []
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     print(f"Extrayendo metadatos del vídeo {video_id}...")
     metadata = fetch_video_metadata(video_id, API_KEY)
     print("Extrayendo comentarios y respuestas...")
-    comments = fetch_comment_threads(video_id, max_total=1000)
+    comments = fetch_comment_threads(video_id, max_total=100000)
     print(f"{len(comments)} comentarios y respuestas extraídos.")
 
     df = pd.DataFrame(comments)
