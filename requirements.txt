@@ -13,3 +13,7 @@ tqdm
 transformers
 wordcloud
 sentencepiece
+numpy
+pandas
+python-dotenv
+requests
