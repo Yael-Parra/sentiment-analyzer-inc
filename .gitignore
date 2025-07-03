@@ -34,6 +34,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.venv
 etl/youtube_comments.csv
 .env
+.venv
+__pycache__
