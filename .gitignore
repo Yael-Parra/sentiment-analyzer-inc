@@ -1,4 +1,9 @@
-# Node modules
+# UV 
+.python-version
+pyproject.toml
+uv.lock
+
+# node modules
 node_modules
 
 # OS específicos
@@ -32,6 +37,6 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
-.env
 .venv
 etl/youtube_comments.csv
+.env
