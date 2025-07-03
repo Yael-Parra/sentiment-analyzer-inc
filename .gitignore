@@ -32,3 +32,6 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+.env
+.venv
+etl/youtube_comments.csv
