@@ -2,3 +2,13 @@ numpy
 pandas
 python-dotenv
 requests
+dotenv
+gdown
+jupyter
+matplotlib
+notebook
+numpy
+openpyxl
+scikit-learn
+seaborn
+wordcloud
