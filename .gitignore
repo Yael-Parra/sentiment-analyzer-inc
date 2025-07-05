@@ -40,3 +40,6 @@ __pycache__/
 .venv
 etl/youtube_comments.csv
 .env
+model_training/xlm-roberta-base/xlm-roberta-multilabel-robust
+model_training/xlm-roberta-base/temp_eval
+model_training/xlm-roberta-base/model-xlm-roberta-base
