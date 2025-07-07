@@ -325,8 +325,8 @@ def clean_youtube_data(df):
 
 # ----------------------------------------------------------------
 if __name__ == "__main__":
-    # Load your data (replace with actual path)
-    # df = pd.read_csv('path/to/your/youtube_extract/data.csv')
+   
+    df = pd.read_csv('AQUI TIENE QUE ESTAR EL PATH O EL DF QUE GENERA YOUTUBE_EXTRACT DENTRO DE LA CARPETA ETL')
     
     # Example with dummy data
     data = {
