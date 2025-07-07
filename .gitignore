@@ -43,3 +43,5 @@ etl/youtube_comments.csv
 model_training/xlm-roberta-base/xlm-roberta-multilabel-robust
 model_training/xlm-roberta-base/temp_eval
 model_training/xlm-roberta-base/model-xlm-roberta-base
+model_training/xlm-roberta-base/dataset_youtube_para_etiquetar.csv
+model_training/xlm-roberta-base/model-xlm-roberta-robust
