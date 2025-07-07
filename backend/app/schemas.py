@@ -1,8 +1,22 @@
-from pydantic import BaseModel
+# backend/app/schemas.py
+from pydantic import BaseModel, HttpUrl
+from typing import List, Optional
 
-class TextIn(BaseModel):
-    comment: str
+class VideoRequest(BaseModel):
+    url: str
 
-class PredictionOut(BaseModel):
-    hate_speech: bool
-    probability: float
+class Comment(BaseModel):
+    threadId: str
+    commentId: str
+    videoId: str
+    author: Optional[str]
+    authorChannelId: Optional[str]
+    isReply: bool
+    parentCommentId: Optional[str]
+    publishedAtComment: Optional[str]
+    text: str
+    likeCountComment: Optional[int]
+    replyCount: Optional[int]
+
+class CommentList(BaseModel):
+    comments: List[Comment]
