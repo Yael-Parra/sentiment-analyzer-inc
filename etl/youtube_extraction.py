@@ -1,11 +1,32 @@
+# backend/etl/youtube_extraction.py
 from dotenv import load_dotenv
-import os, requests, time, pandas as pd
+import os
+import requests
+import time
 import re
+from pydantic import BaseModel
+from typing import List, Optional
 
 load_dotenv()
 API_KEY = os.getenv("YouTube_Data_API_v3")
 
-def extract_video_id(url_or_id):
+class VideoRequest(BaseModel):
+    url: str
+
+class Comment(BaseModel):
+    threadId: str
+    commentId: str
+    videoId: str
+    author: Optional[str]
+    authorChannelId: Optional[str]
+    isReply: bool
+    parentCommentId: Optional[str]
+    publishedAtComment: Optional[str]
+    text: str
+    likeCountComment: Optional[int]
+    replyCount: Optional[int]
+
+def extract_video_id(url_or_id: str) -> str:
     print(f"🔍 Extrayendo ID del vídeo de: {url_or_id}")
     pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
     match = re.search(pattern, url_or_id)
@@ -17,7 +38,7 @@ def extract_video_id(url_or_id):
         print(f"⚠️ No se pudo extraer ID, asumiendo input es ID directo: {url_or_id}")
         return url_or_id
 
-def fetch_comment_threads(video_id, max_total=100000, delay=1):
+def fetch_comment_threads(video_id: str, max_total: int = 1000, delay: int = 1):
     print(f"▶️ Iniciando extracción de comentarios para video {video_id}")
     url = "https://www.googleapis.com/youtube/v3/commentThreads"
     comments = []
@@ -37,14 +58,11 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
         }
         if token:
             params["pageToken"] = token
-            print(f"➡️ Usando pageToken: {token}")
 
         response = requests.get(url, params=params)
-        print(f"📦 Estado HTTP comentarios: {response.status_code}")
         response.raise_for_status()
         data = response.json()
         items = data.get("items", [])
-        print(f"📥 Comentarios recibidos en esta tanda: {len(items)}")
 
         for item in items:
             s = item["snippet"]
@@ -86,25 +104,15 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
             if total >= max_total:
                 break
 
-        print(f"✅ Total comentarios acumulados: {total}")
         token = data.get("nextPageToken")
         if not token:
-            print("🚫 No hay más páginas disponibles.")
             break
 
-        print(f"⏳ Esperando {delay} segundos antes de la siguiente petición...")
         time.sleep(delay)
 
-    print(f"\n🎯 Total final de comentarios extraídos: {total}")
     return comments
 
-url_or_id = input("Introduce URL o ID de vídeo YouTube: ").strip()
-video_id = extract_video_id(url_or_id)
-
-print("Extrayendo comentarios y respuestas...")
-comments = fetch_comment_threads(video_id, max_total=100000)
-print(f"{len(comments)} comentarios y respuestas extraídos.")
-
-df = pd.DataFrame(comments)
-print("Primeros comentarios extraídos:")
-print(df.head())
+def extract_comments(request: VideoRequest) -> List[Comment]:
+    video_id = extract_video_id(request.url)
+    comments = fetch_comment_threads(video_id)
+    return [Comment(**c) for c in comments]
