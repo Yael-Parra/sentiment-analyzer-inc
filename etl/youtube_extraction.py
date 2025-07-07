@@ -17,23 +17,6 @@ def extract_video_id(url_or_id):
         print(f"⚠️ No se pudo extraer ID, asumiendo input es ID directo: {url_or_id}")
         return url_or_id
 
-def fetch_video_metadata(video_id, api_key):
-    print(f"▶️ Iniciando extracción de metadatos para video {video_id}")
-    url = "https://www.googleapis.com/youtube/v3/videos"
-    params = {
-        "part": "snippet,statistics",
-        "id": video_id,
-        "key": api_key
-    }
-    r = requests.get(url, params=params)
-    print(f"📦 Estado HTTP metadata: {r.status_code}")
-    r.raise_for_status()
-    items = r.json().get("items", [])
-    if not items:
-        raise ValueError("Video no encontrado")
-    print(f"✅ Metadatos obtenidos para video {video_id}")
-    return items[0]
-
 def fetch_comment_threads(video_id, max_total=100000, delay=1):
     print(f"▶️ Iniciando extracción de comentarios para video {video_id}")
     url = "https://www.googleapis.com/youtube/v3/commentThreads"
@@ -115,24 +98,13 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
     print(f"\n🎯 Total final de comentarios extraídos: {total}")
     return comments
 
-def save_results(df, video_metadata, outdir="etl/data"):
-    print("▶️ Guardando resultados...")
+def save_comments(df, outdir="etl/data"):
+    print("▶️ Guardando comentarios...")
     os.makedirs(outdir, exist_ok=True)
-    vid = video_metadata["id"]
+    vid = df["videoId"].iloc[0] if not df.empty else "unknown"
     path_comments = os.path.join(outdir, f"youtube_comments_{vid}.csv.gz")
     df.to_csv(path_comments, index=False, compression="gzip", encoding="utf-8")
-    
-    video_info = {
-        "videoId": vid,
-        "videoPublishedAt": video_metadata["snippet"]["publishedAt"],
-        "videoLikeCount": int(video_metadata["statistics"].get("likeCount", 0)),
-        "videoCommentCount": int(video_metadata["statistics"].get("commentCount", 0))
-    }
-    meta_df = pd.DataFrame([video_info])
-    path_meta = os.path.join(outdir, f"youtube_metadata_{vid}.csv")
-    meta_df.to_csv(path_meta, index=False)
     print(f"✅ Comentarios guardados en: {path_comments}")
-    print(f"✅ Metadatos guardados en: {path_meta}")
 
 if __name__ == "__main__":
     url_or_id = input("Introduce URL o ID de vídeo YouTube: ").strip()
@@ -141,8 +113,6 @@ if __name__ == "__main__":
         print("❌ No API_KEY en .env")
         exit(1)
 
-    print(f"Extrayendo metadatos del vídeo {video_id}...")
-    metadata = fetch_video_metadata(video_id, API_KEY)
     print("Extrayendo comentarios y respuestas...")
     comments = fetch_comment_threads(video_id, max_total=100000)
     print(f"{len(comments)} comentarios y respuestas extraídos.")
@@ -151,4 +121,4 @@ if __name__ == "__main__":
     print("Primeros comentarios extraídos:")
     print(df.head())
 
-    save_results(df, metadata)
+    save_comments(df)
