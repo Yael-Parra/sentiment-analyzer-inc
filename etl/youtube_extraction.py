@@ -102,7 +102,7 @@ url_or_id = input("Introduce URL o ID de vídeo YouTube: ").strip()
 video_id = extract_video_id(url_or_id)
 
 print("Extrayendo comentarios y respuestas...")
-comments = fetch_comment_threads(video_id, max_total=100000)
+comments = fetch_comment_threads(video_id, max_total=100)
 print(f"{len(comments)} comentarios y respuestas extraídos.")
 
 df = pd.DataFrame(comments)
