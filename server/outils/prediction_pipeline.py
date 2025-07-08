@@ -40,8 +40,30 @@ def predict_pipeline(youtube_url_or_id, max_comments=100):
     for i, col in enumerate(model.config.id2label.values()):
         df_clean[col + "_pred"] = preds[:, i]
 
-    # 6. Devuelve resultados
-    return {
+    # 6. Estadísticas por etiqueta
+
+    total_comments = len(df_clean)
+    stats = {}
+    for col in model.config.id2label.values():
+        positives = (df_clean[col + "_pred"] > 0.5).sum()
+        stats[col] = {
+            "count": int(positives),
+            "percentage": float(positives) / total_comments * 100 if total_comments > 0 else 0
+        }
+
+    # 6. Devuelve resultados, el id del video y también una lista de comentarios.
+    result = {
         "video_id": video_id,
-        "comments": df_clean.to_dict(orient="records")
+        "total_comments": total_comments,
+        "stats": stats,
+        "comments": [
+            {
+                "commentId": row["commentId"],
+                "text": row["text"],
+                **{col + "_pred": row[col + "_pred"] for col in model.config.id2label.values()}
+            }
+            for _, row in df_clean.iterrows()
+        ]
     }
+
+    return result
