@@ -7,8 +7,7 @@
     "num_numeric_features": 84,
     "num_layers": 2,
     "dropout_rate": 0.4,
-    "max_sequence_length": 50,
-    "device": "cpu"
+    "max_sequence_length": 50
   },
   "classes": {
     "target_classes": [
@@ -71,42 +70,13 @@
       "hamming_loss": 0.01473004650324583,
       "jaccard_score": 0.6822267174720764
     },
-    "cv_metrics": {
-      "f1_macro_mean": 0.9549427055287083,
-      "f1_macro_std": 0.005926554375476147,
-      "f1_weighted_mean": 0.9592702019880306,
-      "hamming_loss_mean": 0.013012362085282803,
-      "stability": "Excelente"
-    },
-    "category_performance": {
-      "identity": 0.9811812410255717,
-      "behavior": 0.9340606693209248,
-      "content": 0.9090709235583037,
-      "general": 0.9990217368163335
+    "training_results": {
+      "best_f1_macro": 0.9555352605886971,
+      "best_loss": 0.04942152874751223,
+      "epochs_trained": 60,
+      "final_train_loss": 0.0314873720508741,
+      "final_val_loss": 0.06563601882921324
     }
-  },
-  "training": {
-    "epochs_trained": 60,
-    "best_epoch": 57,
-    "early_stopping": true,
-    "optimizer": "Adam",
-    "learning_rate": 0.0008,
-    "batch_size": 32,
-    "weighted_loss": true,
-    "cross_validation_folds": 5
-  },
-  "metadata": {
-    "model_version": "multitoxic_v1.0_20250708_181744",
-    "creation_date": "20250708_181744",
-    "pytorch_version": "2.2.2",
-    "total_parameters": 3133727,
-    "dataset_size": 7096,
-    "features_engineered": 107,
-    "spacy_model": "en_core_web_sm",
-    "language": "English",
-    "architecture": "BiLSTM_Hybrid_MultiHead_Attention",
-    "problem_type": "multi_label_classification",
-    "toxicity_types": 12
   },
   "thresholds": {
     "toxic": 0.5,
@@ -122,29 +92,33 @@
     "homophobic": 0.3,
     "radicalism": 0.2
   },
-  "preprocessing": {
-    "max_text_length": 10000,
-    "min_word_length": 2,
-    "preserve_patterns": [
-      "caps",
-      "exclamations",
-      "mentions",
-      "hashtags",
-      "emojis"
-    ],
-    "special_tokens": {
-      "PAD": 0,
-      "UNK": 1,
-      "CAPS": 2,
-      "EXCL": 3,
-      "HATE": 4,
-      "ABUSIVE": 5,
-      "NUM": 6,
-      "THREAT": 7,
-      "RACIST": 8,
-      "RADICAL": 9
-    },
-    "features_extracted": 84,
-    "normalization": "StandardScaler"
+  "dataset_info": {
+    "total_samples": 7096,
+    "train_samples": 4257,
+    "val_samples": 1419,
+    "test_samples": 1420,
+    "features_count": 107,
+    "vocab_size": 2785,
+    "sequence_length": 50
+  },
+  "metadata": {
+    "model_version": "multitoxic_v1.0_20250709_003639",
+    "creation_date": "20250709_003639",
+    "pytorch_version": "2.2.2",
+    "total_parameters": 3133727,
+    "trainable_parameters": 3133727,
+    "architecture": "BiLSTM_Hybrid_MultiHead_Attention_Categorical",
+    "problem_type": "multi_label_classification",
+    "language": "English",
+    "toxicity_types": 12,
+    "spacy_model": "en_core_web_sm",
+    "validation_method": "train_test_split"
+  },
+  "files": {
+    "model": "multitoxic_v1.0_20250709_003639_model.pth",
+    "processor": "multitoxic_v1.0_20250709_003639_processor.pkl",
+    "features": "multitoxic_v1.0_20250709_003639_features.pkl",
+    "config": "multitoxic_v1.0_20250709_003639_config.json",
+    "loader": "multitoxic_v1.0_20250709_003639_loader.py"
   }
 }
