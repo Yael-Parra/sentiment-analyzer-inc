@@ -1,15 +1,15 @@
-# Modelo MULTITOXIC - Guía de Implementación
+## 🚀 **Modelo MULTITOXIC - Guía de Implementación (Actualizada)**
 
-## Información del Modelo
+### **Información del Modelo**
 
-- **Performance:** F1-macro 95.49%
+- **Performance:** F1-macro 95.16%
 - **Tipos detectados:** 12 tipos de toxicidad simultáneos
 - **Input:** Comentarios de YouTube en inglés
 - **Output:** 24 valores (12 probabilidades + 12 booleanos)
 
 ---
 
-## Tipos de Toxicidad
+### **Tipos de Toxicidad**
 
 1. `toxic` - Toxicidad general
 2. `hatespeech` - Discurso de odio
@@ -26,9 +26,9 @@
 
 ---
 
-## Archivos del Modelo
+### **Archivos del Modelo**
 
-### Archivos Obligatorios (4)
+#### **Archivos Obligatorios (4)**
 
 #### 1. `multitoxic_v1.0_XXXXXX_config.json`
 - **Uso:** Configuración inicial del pipeline
@@ -50,7 +50,7 @@
 - **Contiene:** Red neuronal entrenada (3.13M parámetros)
 - **Cuándo:** Para cada comentario (paso 3)
 
-### Archivo Opcional
+#### **Archivo Opcional**
 
 #### 5. `multitoxic_v1.0_XXXXXX_loader.py`
 - **Uso:** Clase que integra todo automáticamente
@@ -58,12 +58,11 @@
 
 ---
 
-## Requisitos del Sistema
+### **Requisitos del Sistema**
 
 ```bash
 # Dependencias obligatorias
-pip install torch>=1.9.0 numpy scikit-learn spacy
-python -m spacy download en_core_web_sm
+pip install torch numpy pandas scikit-learn dill tqdm
 
 # Hardware mínimo
 # RAM: 4GB, Almacenamiento: 100MB, CPU/GPU: ambos soportados
@@ -71,97 +70,45 @@ python -m spacy download en_core_web_sm
 
 ---
 
-## Opción 1: Implementación Manual
+### Usar Loader Automático (Recomendado)**
 
-### Inicialización (una vez al arrancar)
-
-```python
-import json
-import pickle
-import torch
-
-# 1. Cargar configuración
-with open('config.json', 'r') as f:
-    config = json.load(f)
-
-# 2. Cargar procesador de texto
-with open('processor.pkl', 'rb') as f:
-    processor_data = pickle.load(f)
-    processor = processor_data['processor']
-
-# 3. Cargar extractor de features
-with open('features.pkl', 'rb') as f:
-    features_data = pickle.load(f)
-    feature_extractor = features_data['feature_extractor']
-
-# 4. Recrear y cargar modelo
-model = crear_arquitectura_bilstm(config['model_config'])
-checkpoint = torch.load('model.pth')
-model.load_state_dict(checkpoint['model_state_dict'])
-model.eval()
-```
-
-### Predicción (por cada comentario)
+#### **Inicialización (una vez al arrancar)**
 
 ```python
-def predecir_toxicidad(texto_youtube):
-    # Paso 1: Texto → tokens
-    tokens, visual_features = processor.text_to_sequence_multitoxic(texto_youtube)
-    
-    # Paso 2: Texto → 84 features numéricas
-    features_dict = feature_extractor.extract_multitoxic_features(texto_youtube)
-    normalized_features = feature_extractor.normalize_features(features_dict)
-    
-    # Paso 3: Predicción con modelo
-    text_tensor = torch.tensor([tokens])
-    features_tensor = torch.tensor([normalized_features])
-    
-    with torch.no_grad():
-        logits = model(text_tensor, features_tensor)
-        probabilidades = torch.sigmoid(logits)[0]
-    
-    # Paso 4: Aplicar thresholds
-    thresholds = config['thresholds']
-    detecciones = {}
-    
-    for i, tipo in enumerate(config['classes']['class_names']):
-        prob = float(probabilidades[i])
-        detectado = prob > thresholds[tipo]
-        
-        detecciones[f"{tipo}_probability"] = prob
-        detecciones[f"is_{tipo}"] = detectado
-    
-    return detecciones
-```
-
----
-
-## Opción 2: Usar Loader Automático
-
-### Inicialización (una vez al arrancar)
-
-```python
-from multitoxic_loader import MultitoxicModelLoader
+from models.bilstm_advanced.multitoxic_v1.0_XXXXXX_loader import MultitoxicLoader
 
 # Cargar modelo completo automáticamente
-loader = MultitoxicModelLoader("./models/bilstm_advanced")
-loader.load_model()
+loader = MultitoxicLoader("./models/bilstm_advanced")
+loader.load_model()  # Busca automáticamente la versión más reciente
 ```
 
-### Predicción (por cada comentario)
+#### **Predicción (por cada comentario)**
 
 ```python
 def predecir_toxicidad(texto_youtube):
     # Todo automático en una línea
-    resultado = loader.predict(texto_youtube)
+    resultado = loader.predict(
+        texto_youtube, 
+        return_probabilities=True,
+        return_categories=True,
+        return_details=False
+    )
     
     # Extraer datos para base de datos
-    db_data = resultado['database_ready']
+    db_data = {}
     
-    return db_data  # Contiene las 24 columnas listas
+    # 12 probabilidades
+    for tipo, prob in resultado['probabilities'].items():
+        db_data[f'{tipo}_probability'] = prob
+    
+    # 12 booleanos
+    for tipo in resultado['probabilities'].keys():
+        db_data[f'is_{tipo}'] = tipo in resultado['detected_types']
+    
+    resultado['database_ready'] = db_data
+    return resultado
 ```
-
----
+--
 
 ## Pipeline YouTube → Base de Datos
 
@@ -323,11 +270,6 @@ comentario = {
 
 ## Performance y Limitaciones
 
-### Performance
-- **Velocidad:** 50-100ms por comentario (CPU)
-- **Memoria:** ~200MB durante uso
-- **Precisión:** F1-macro 95.49%
-
 ### Limitaciones
 - Solo funciona en **inglés**
 - Optimizado para **comentarios de YouTube**
@@ -339,17 +281,3 @@ comentario = {
 - **Texto muy largo:** Se trunca a 10,000 caracteres
 - **Solo emojis:** Se procesa normalmente
 
----
-
-## Recomendación
-
-**Para producción:** Usar **Opción 2 (Loader Automático)** porque:
-- ✅ Menos código propio
-- ✅ Manejo automático de errores
-- ✅ Más fácil de mantener
-- ✅ Respuesta estructurada lista para BD
-
-**Para desarrollo/debugging:** Usar **Opción 1 (Manual)** si necesitas:
-- ✅ Control total del proceso
-- ✅ Debugging paso a paso
-- ✅ Modificaciones específicas
