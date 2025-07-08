@@ -32,3 +32,4 @@ dist-ssr
 etl/youtube_comments.csv
 .env
 .venv
+__pycache__
