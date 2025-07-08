@@ -13,6 +13,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.get("/")
+def read_root():
+    return {"message": "API is up and running 🚀"}
 
 @app.post("/extract-comments/", response_model=List[Comment])
 def extract_comments_endpoint(request: VideoRequest):
