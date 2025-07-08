@@ -33,3 +33,5 @@ etl/youtube_comments.csv
 .env
 .venv
 __pycache__
+model_training
+etl/data/youtube_comments_hp2QZ0BGaps.csv.gz
