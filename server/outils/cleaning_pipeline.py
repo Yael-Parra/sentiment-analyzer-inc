@@ -5,7 +5,6 @@ from transformers import pipeline
 from tqdm import tqdm
 
 # Initialize sentiment analysis tools once
-classifier_es_sentiment = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
 analyzer_en = SentimentIntensityAnalyzer()
 tqdm.pandas()
 
@@ -145,36 +144,6 @@ def convert_data_types(df):
             print(f"Warning: Could not convert column '{col}': {e}")
     
     return df_copy
-
-# ----------------------------------------------------------------
-# Clean text content
-def clean_text_content(df, text_columns=['text']):
-    """
-    Clean text content by:
-    - Removing line breaks and extra spaces
-    - Removing URLs (while extracting them to a separate column)
-    - Adding self-promotion detection
-    - Adding tag detection
-    """
-    df_clean = df.copy()
-    
-    # Remove line breaks and extra spaces
-    for col in text_columns:
-        if col in df_clean.columns:
-            df_clean[col] = df_clean[col].str.replace(r'[\r\n]+', ' ', regex=True).str.strip()
-    
-    # Extract and remove URLs
-    if 'text' in df_clean.columns:
-        df_clean = extract_and_remove_urls(df_clean)
-    
-    # Add self-promotion detection
-    df_clean['is_self_promotional'] = df_clean['text'].apply(is_self_promotional)
-    
-    # Add tag detection
-    df_clean['contains_tag'] = df_clean['text'].apply(contains_tag)
-    
-    return df_clean
-
 # ----------------------------------------------------------------
 # URL handling functions
 def extract_and_remove_urls(df, text_column='text'):
@@ -186,13 +155,10 @@ def extract_and_remove_urls(df, text_column='text'):
     df = df.copy()
     
     # Extract URLs (store as list)
-    df['extracted_urls'] = df[text_column].apply(
-        lambda x: re.findall(r'https?://\S+|www\.\S+', str(x))
+    df['extracted_urls'] = df[text_column].apply(lambda x: re.findall(r'https?://\S+|www\.\S+', str(x)))
     
     # Remove URLs from text (keep everything else)
-    df[text_column] = df[text_column].apply(
-        lambda x: re.sub(r'https?://\S+|www\.\S+', '', str(x))
-    )
+    df[text_column] = df[text_column].apply(lambda x: re.sub(r'https?://\S+|www\.\S+', '', str(x)))
     
     # Add simple boolean flag
     df['has_url'] = df['extracted_urls'].apply(lambda x: len(x) > 0)
@@ -206,7 +172,7 @@ self_promo_keywords = {
     'en': [
         'check out my', 'subscribe to', 'follow me', 'visit my', 'link in bio',
         'watch my', 'support my', 'my channel', 'my content', 'please subscribe',
-        'giveaway on my', 'join my', 'don't forget to follow', 'my new video',
+        'giveaway on my', 'join my', 'don’t forget to follow', 'my new video',
         'check my', 'like and subscribe', 'hit subscribe', 'sub to my',
         'drop a sub', 'my latest video', 'my socials', 'follow my', 'my page',
         'my profile', 'my website', 'my blog', 'my podcast', 'my merch'
@@ -220,8 +186,56 @@ self_promo_keywords = {
         'checa mi', 'dale like y suscríbete', 'suscribete', 'mis redes'
     ],
     
-    # Other languages remain the same...
+    # Hindi
+    'hi': [
+        'मेरा चैनल देखो', 'सब्सक्राइब करो', 'मुझे फॉलो करो', 'मेरी वेबसाइट देखो',
+        'मेरा लिंक', 'मेरा वीडियो देखो', 'मेरे चैनल को सपोर्ट करो', 'मेरा कंटेंट',
+        'कृपया सब्सक्राइब करें', 'मेरे चैनल से जुड़ें', 'मेरा नया वीडियो'
+    ],
+    
+    # Portuguese
+    'pt': [
+        'confira meu', 'inscreva-se no', 'me siga', 'visite meu', 'link na bio',
+        'assista meu', 'apoie meu', 'meu canal', 'meu conteúdo', 'por favor se inscreva',
+        'sorteio no meu', 'junte-se ao meu', 'não esqueça de seguir'
+    ],
+    
+    # French
+    'fr': [
+        'regarde mon', 'abonne-toi à', 'suis-moi', 'visite mon', 'lien en bio',
+        'regarde ma', 'soutiens mon', 'ma chaîne', 'mon contenu', 'abonne-toi s\'il te plaît',
+        'concours sur mon', 'rejoins mon', 'n\'oublie pas de suivre'
+    ],
+    
+    # German
+    'de': [
+        'schau dir mein', 'abonniere', 'folge mir', 'besuche mein', 'link in bio',
+        'sieh dir mein', 'unterstütze mein', 'mein kanal', 'mein inhalt', 'bitte abonnieren',
+        'gewinnspiel auf mein', 'tritt mein bei', 'vergiss nicht zu folgen'
+    ],
+    
+    # Russian
+    'ru': [
+        'посмотри мой', 'подпишись на', 'подпишись на меня', 'зайди на мой', 'ссылка в профиле',
+        'посмотри мое', 'поддержи мой', 'мой канал', 'мой контент', 'пожалуйста подпишись',
+        'конкурс на моем', 'присоединяйся к моему', 'не забудь подписаться'
+    ],
+    
+    # Japanese
+    'ja': [
+        '私のチャンネルを見て', '登録して', 'フォローして', '私のサイトを見て',
+        'プロフィールのリンク', '私の動画を見て', '私のチャンネルをサポートして', '私のコンテンツ',
+        'チャンネル登録お願いします', '私の新しい動画'
+    ],
+    
+    # Arabic
+    'ar': [
+        'شاهد قناتي', 'اشترك في', 'تابعني', 'زور موقعي', 'الرابط في البايو',
+        'ادعم قناتي', 'قناتي', 'محتواي', 'من فضلك اشترك', 'انضم إلى قناتي',
+        'لا تنسى المتابعة'
+    ]
 }
+
 
 def is_self_promotional(text):
     """Detect if text contains self-promotional content."""
@@ -234,114 +248,108 @@ def is_self_promotional(text):
         if any(phrase in text for phrase in lang_keywords):
             return True
     return False
-
-def contains_tag(text):
-    """Detect if text contains @ tags."""
-    if not isinstance(text, str):
-        return False
-    return '@' in text
-
 # ----------------------------------------------------------------
-# Sentiment analysis
-def analyze_sentiment(df, text_column='text'):
-    """
-    Perform multilingual sentiment analysis on text content.
-    Returns DataFrame with added sentiment columns.
-    """
-    def get_sentiment(text):
-        if not isinstance(text, str) or not text.strip():
-            return {'sentiment_type': 'neutral', 'sentiment_intensity': 'weak'}
-        
-        is_spanish = any(ord(c) > 128 for c in text)
-        
-        if is_spanish:
-            results = classifier_es_sentiment(text, truncation=True, max_length=512)
-            result_dict = {r['label'].lower(): r['score'] for r in results}
-            prob_pos = result_dict.get('pos', 0)
-            prob_neg = result_dict.get('neg', 0)
-            prob_neu = result_dict.get('neu', 0)
-            compound = prob_pos - prob_neg
-            
-            if compound >= 0.05:
-                sentiment = 'positive'
-            elif compound <= -0.05:
-                sentiment = 'negative'
-            else:
-                sentiment = 'neutral'
-            abs_compound = abs(compound)
-            
-        else:
-            scores = analyzer_en.polarity_scores(text)
-            compound = scores['compound']
-            if compound >= 0.05:
-                sentiment = 'positive'
-            elif compound <= -0.05:
-                sentiment = 'negative'
-            else:
-                sentiment = 'neutral'
-            abs_compound = abs(compound)
-        
-        if abs_compound > 0.5:
-            intensity = 'strong'
-        elif abs_compound > 0.2:
-            intensity = 'moderate'
-        else:
-            intensity = 'weak'
-        
-        return {
-            'sentiment_type': sentiment,
-            'sentiment_intensity': intensity,
-        }
+def detect_tags(df, text_column='text'):
+    """Add a boolean column indicating if there are @tags and clean them from the text column."""
     
-    sentiment_df = df[text_column].progress_apply(get_sentiment).apply(pd.Series)
-    return pd.concat([df, sentiment_df], axis=1)
-
+    def has_tag(text):
+        if not isinstance(text, str):
+            return False
+        return bool(re.search(r'@\w+', text))
+    
+    def remove_tags(text):
+        if not isinstance(text, str):
+            return text
+        return re.sub(r'@\w+', '', text).strip()
+    
+    df['has_tag'] = df[text_column].apply(has_tag)
+    df[text_column] = df[text_column].apply(remove_tags)
+    
+    return df
 # ----------------------------------------------------------------
-# Main pipeline function
-def clean_youtube_data(df):
+# Removing line breaks and extra spaces
+def remove_linebreaks_and_spaces(df, text_columns=['text']):
     """
-    Complete cleaning pipeline for YouTube comments data.
-    Processes the DataFrame through all cleaning steps in proper order.
+    Remove line breaks and extra spaces from specified text columns.
     """
-    # Step 1: Normalize column names
-    df_clean = normalize_column_names(df)
-    
-    # Step 2: Handle duplicates
-    df_clean = handle_duplicates(df_clean)
-    
-    # Step 3: Handle null values
-    df_clean = handle_nulls(df_clean)
-    
-    # Step 4: Convert data types
-    df_clean = convert_data_types(df_clean)
-    
-    # Step 5: Clean text content
-    df_clean = clean_text_content(df_clean)
-    
-    # Step 6: Analyze sentiment (optional - can be commented out if not needed)
-    df_clean = analyze_sentiment(df_clean)
-    
+    df_clean = df.copy()
+    for col in text_columns:
+        if col in df_clean.columns:
+            df_clean[col] = (
+                df_clean[col]
+                .astype(str)
+                .str.replace(r'[\r\n]+', ' ', regex=True)  # Replace line breaks
+                .str.strip()  # Trim leading/trailing whitespace
+                .str.replace(r'\s{2,}', ' ', regex=True)  # Collapse multiple spaces
+            )
     return df_clean
 
 # ----------------------------------------------------------------
-if __name__ == "__main__":
-   
-    df = pd.read_csv('AQUI TIENE QUE ESTAR EL PATH O EL DF QUE GENERA YOUTUBE_EXTRACT DENTRO DE LA CARPETA ETL')
+# Sentiment analysis
+def analyze_sentiment(text):
+    if not isinstance(text, str) or not text.strip():
+        return pd.Series({
+            'sentiment_type': 'neutral',
+            'sentiment_intensity': 'weak'
+        })
+
+    scores = analyzer_en.polarity_scores(text)
+    compound = scores['compound']
     
-    # Example with dummy data
-    data = {
-        'commentId': ['1', '2', '3'],
-        'Author': ['user1', 'user2', None],
-        'Text': ['Great video!', 'Check out my channel', None],
-        'PublishedAt': ['2023-01-01', '2023-01-02', None],
-        'LikeCount': ['10', None, '5']
-    }
-    df = pd.DataFrame(data)
+    # Sentiment type
+    if compound >= 0.05:
+        sentiment_type = 'positive'
+    elif compound <= -0.05:
+        sentiment_type = 'negative'
+    else:
+        sentiment_type = 'neutral'
     
-    # Run the cleaning pipeline
-    cleaned_df = clean_youtube_data(df)
+    # Sentiment intensity
+    abs_score = abs(compound)
+    if abs_score >= 0.6:
+        sentiment_intensity = 'strong'
+    elif abs_score >= 0.3:
+        sentiment_intensity = 'moderate'
+    else:
+        sentiment_intensity = 'weak'
     
-    print("Original shape:", df.shape)
-    print("Cleaned shape:", cleaned_df.shape)
-    print("Cleaned columns:", cleaned_df.columns.tolist())
+    return pd.Series({
+        'sentiment_type': sentiment_type,
+        'sentiment_intensity': sentiment_intensity
+    })
+
+
+# ----------------------------------------------------------------
+# Main pipeline function by order of operations
+def clean_youtube_data(df):
+# Step 1  normalize_column_names
+    df = normalize_column_names(df)
+# Step 2  handle_duplicates
+    df = handle_duplicates(df)
+# Step 3  handle_nulls
+    df = handle_nulls(df)
+# Step 4  convert_data_types
+    df = convert_data_types(df)
+# Step 5  extract_and_remove_urls
+    df = extract_and_remove_urls(df)
+# Step 6  is_self_promotional
+    df['is_self_promotional'] = df['text'].apply(is_self_promotional)
+# Step 7  detect_tags
+    df = detect_tags(df)
+# Step 8  remove_linebreaks_and_spaces
+    df = remove_linebreaks_and_spaces(df)
+# Step 9 analyze_sentiment
+    df[['sentiment_type', 'sentiment_intensity']] = df['text'].apply(analyze_sentiment)
+
+    return df
+
+# ----------------------------------------------------------------
+def process_youtube_comments(input_df: pd.DataFrame) -> pd.DataFrame:
+    return clean_youtube_data(input_df)
+
+
+
+
+
+
 
