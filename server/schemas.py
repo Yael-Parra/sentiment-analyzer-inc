@@ -34,6 +34,19 @@ class Comment(BaseModel):
     radicalism_probability: Optional[float]
     is_radicalism: Optional[bool]
 
+    # Campos adicionales temporales
+    sentiment_type: Optional[str] = None
+    sentiment_intensity: Optional[float] = None
+    is_self_promotional: Optional[bool] = None
+    has_url: Optional[bool] = None
+    has_tag: Optional[bool] = None
+    like_count_comment: Optional[int] = None
+    reply_count: Optional[int] = None
+    author: Optional[str] = None
+    
+    class Config:
+        extra = "allow"
+
 class PredictionStats(BaseModel):
     count: int
     percentage: float
