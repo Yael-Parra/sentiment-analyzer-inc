@@ -98,9 +98,20 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
     print(f"\n🎯 Total final de comentarios extraídos: {total}")
     return comments
 
+def save_comments(df, outdir="etl/data"):
+    print("▶️ Guardando comentarios...")
+    os.makedirs(outdir, exist_ok=True)
+    vid = df["videoId"].iloc[0] if not df.empty else "unknown"
+    path_comments = os.path.join(outdir, f"youtube_comments_{vid}.csv.gz")
+    df.to_csv(path_comments, index=False, compression="gzip", encoding="utf-8")
+    print(f"✅ Comentarios guardados en: {path_comments}")
+
 if __name__ == "__main__":
     url_or_id = input("Introduce URL o ID de vídeo YouTube: ").strip()
     video_id = extract_video_id(url_or_id)
+    if not API_KEY:
+        print("❌ No API_KEY en .env")
+        exit(1)
 
     print("Extrayendo comentarios y respuestas...")
     comments = fetch_comment_threads(video_id, max_total=100000)
@@ -109,3 +120,5 @@ if __name__ == "__main__":
     df = pd.DataFrame(comments)
     print("Primeros comentarios extraídos:")
     print(df.head())
+
+    save_comments(df)
