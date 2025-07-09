@@ -35,4 +35,11 @@ seaborn>=0.13.2
 transformers==4.40.2
 vadersentiment>=3.3.2
 wordcloud>=1.9.4
+# For testing -------------------------------------------
+pytest==8.4.1
+coverage==7.9.2
+pytest-asyncio==1.0.0
+pytest-mock==3.14.1
+requests-mock==1.12.1
+# -------------------------------------------------------
 # python -m spacy download en_core_web_sm
