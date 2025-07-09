@@ -8,7 +8,7 @@ import server.database.save_comments as save_comments
 from server.database import save_comments
 from server.outils.pipeline_prediction import predict_pipeline 
 from server.database.save_comments import save_comment,save_comments_batch,get_comments_by_video,delete_comments_by_video
-from server.outils.cleaning_pipeline import clean_youtube_data, analyze_sentiment
+from server.outils.pipeline_cleaning import clean_youtube_data, analyze_sentiment
 # ==============================  Cleaning Pipeline  ==============================
 
 

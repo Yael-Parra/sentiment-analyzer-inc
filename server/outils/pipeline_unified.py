@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 sys.path.append(str(Path(__file__).parent.parent.parent))  
 from etl.youtube_extraction import extract_video_id, fetch_comment_threads
-from server.outils.cleaning_pipeline import clean_youtube_data
+from server.outils.pipeline_cleaning import clean_youtube_data
 from server.database.save_comments import save_comments_batch
 
 # Configuración del modelo
@@ -70,65 +70,73 @@ class UnifiedPipeline:
         }
     
     def process_comments(self, youtube_url_or_id: str, max_comments: int = 100) -> Dict[str, Any]:
-        """Pipeline completo: Extracción -> Limpieza -> Predicción -> Guardado"""
-        # 1. Extracción
-        video_id = extract_video_id(youtube_url_or_id)
-        raw_comments = fetch_comment_threads(video_id, max_total=max_comments)
-        
-        if not raw_comments:
-            return self._empty_response(video_id)
+        try:
+            video_id = extract_video_id(youtube_url_or_id)
+            raw_comments = fetch_comment_threads(video_id, max_total=max_comments)
+            
+            if not raw_comments:
+                return self._empty_response(video_id)
 
-        # 2. Limpieza
-        df_clean = clean_youtube_data(pd.DataFrame(raw_comments))
-        
-        # 3. Predicción y estructuración
-        enriched_comments = self._enrich_comments(df_clean, video_id)
-        
-        # 4. Estadísticas
-        stats = self._calculate_stats(enriched_comments)
-        
-        # 5. Guardado (solo campos necesarios para BD)
-        self._save_to_db(enriched_comments)
-        
-        return {
-            "video_id": video_id,
-            "total_comments": len(enriched_comments),
-            "stats": stats,
-            "comments": enriched_comments
-        }
+            # Debug: Inspecciona comentarios crudos
+            print(f"\n📦 Comentarios crudos recibidos (muestra 1):")
+            print(raw_comments[0] if raw_comments else "No hay comentarios")
+
+            df_clean = clean_youtube_data(pd.DataFrame(raw_comments))
+            
+            # Debug: Verifica el DataFrame limpio
+            print("\n🧹 DataFrame limpio - Columnas:", df_clean.columns.tolist())
+            print("Muestra primera fila:", df_clean.iloc[0].to_dict() if not df_clean.empty else "DataFrame vacío")
+            
+            enriched = self._enrich_comments(df_clean, video_id)
+            
+            if not enriched:
+                raise ValueError("No se pudo enriquecer ningún comentario")
+                
+            return {
+                "video_id": video_id,
+                "total_comments": len(enriched),
+                "stats": self._calculate_stats(enriched),
+                "comments": enriched
+            }
+            
+        except Exception as e:
+            print(f"❌ Error en process_comments: {str(e)}")
+            raise
 
     def _enrich_comments(self, clean_df: pd.DataFrame, video_id: str) -> List[Dict[str, Any]]:
         enriched = []
+        
+        # Verificación exhaustiva de columnas
+        required_columns = {"text", "sentiment_type", "sentiment_intensity"}
+        missing_cols = required_columns - set(clean_df.columns)
+        if missing_cols:
+            print(f"🚨 Columnas faltantes: {missing_cols}")
+            return []
+
         for _, row in clean_df.iterrows():
             try:
-                # 1. Datos de toxicidad
-                tox_data = self._predict_toxicity(row["text"])
+                # Debug: Verifica estructura del comentario
+                print(f"\n📝 Comentario crudo: { {k: type(v) for k, v in row.items()} }")
                 
-                # 2. Datos de sentimiento (del cleaning pipeline)
-                sentiment_data = {
-                    "sentiment_type": row.get("sentiment_type", "neutral"),
-                    "sentiment_intensity": row.get("sentiment_intensity", "weak")
-                }
-                
-                # 3. Construir comentario final (solo campos de db_fields)
-                comment = {
+                # Asegura que los campos críticos existen
+                comment_data = {
                     "video_id": video_id,
-                    "text": row["text"],
-                    **{k: v for k, v in tox_data.items() if k in self.db_fields},
-                    **{k: v for k, v in sentiment_data.items() if k in self.db_fields}
+                    "text": str(row["text"]),
+                    "sentiment_type": str(row.get("sentiment_type", "neutral")),
+                    "sentiment_intensity": str(row.get("sentiment_intensity", "weak"))
                 }
-                enriched.append(comment)
+                
+                # Añade toxicidad solo si el modelo está cargado
+                if self.model_loader:
+                    tox_data = self._predict_toxicity(str(row["text"]))
+                    comment_data.update(tox_data)
+                
+                enriched.append(comment_data)
                 
             except Exception as e:
-                print(f"⚠️ Error enriqueciendo comentario: {e}")
-                # Versión de respaldo
-                enriched.append({
-                    "video_id": video_id,
-                    "text": row["text"],
-                    **self._get_default_toxicity_values(),
-                    "sentiment_type": "neutral",
-                    "sentiment_intensity": "weak"
-                })
+                print(f"⚠️ Error procesando fila: {e}\nContenido: {row.to_dict()}")
+                continue
+                
         return enriched
 
     def _predict_toxicity(self, text: str) -> Dict[str, Any]:

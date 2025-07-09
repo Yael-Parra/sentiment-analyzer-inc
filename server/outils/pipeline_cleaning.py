@@ -289,13 +289,12 @@ def remove_linebreaks_and_spaces(df, text_columns=['text']):
 # Sentiment analysis
 def analyze_sentiment(text: str) -> Dict[str, Any]:
     """
-    Analiza el sentimiento del texto y devuelve los resultados en formato 
-    compatible con el esquema Comment de Pydantic/Supabase.
+    Versión corregida que devuelve solo los campos necesarios
     """
     if not isinstance(text, str) or not text.strip():
         return {
             'sentiment_type': 'neutral',
-            'sentiment_intensity': 'weak'  # Valor por defecto para texto vacío
+            'sentiment_intensity': 'weak'  # Solo estos 2 campos
         }
 
     scores = analyzer_en.polarity_scores(text)
@@ -309,7 +308,7 @@ def analyze_sentiment(text: str) -> Dict[str, Any]:
     else:
         sentiment_type = 'neutral'
     
-    # Determinar intensidad (como string para el esquema)
+    # Determinar intensidad
     abs_score = abs(compound)
     if abs_score >= 0.6:
         sentiment_intensity = 'strong'
@@ -320,8 +319,25 @@ def analyze_sentiment(text: str) -> Dict[str, Any]:
     
     return {
         'sentiment_type': sentiment_type,
-        'sentiment_intensity': sentiment_intensity  # ¡Ya en el formato correcto!
+        'sentiment_intensity': sentiment_intensity  # Solo 2 campos clave
     }
+
+def clean_youtube_data(df):
+    # Paso 1-8 (mantener igual)
+    df = normalize_column_names(df)
+    df = handle_duplicates(df)
+    df = handle_nulls(df)
+    df = convert_data_types(df)
+    df = extract_and_remove_urls(df)
+    df['is_self_promotional'] = df['text'].apply(is_self_promotional)
+    df = detect_tags(df)
+    df = remove_linebreaks_and_spaces(df)
+    
+    # Paso 9 Corregido: Asignación de sentimientos
+    sentiment_results = df['text'].apply(analyze_sentiment).apply(pd.Series)
+    df = pd.concat([df, sentiment_results], axis=1)
+    
+    return df
 
 # ----------------------------------------------------------------
 # Main pipeline function by order of operations
@@ -343,8 +359,8 @@ def clean_youtube_data(df):
 # Step 8  remove_linebreaks_and_spaces
     df = remove_linebreaks_and_spaces(df)
 # Step 9 analyze_sentiment
-    df[['sentiment_type', 'sentiment_intensity', 'sentiment_intensity_category']] = df['text'].apply(analyze_sentiment)
-
+    sentiment_results = df['text'].apply(analyze_sentiment).apply(pd.Series)
+    df = pd.concat([df, sentiment_results], axis=1)
     return df
 
 # ----------------------------------------------------------------

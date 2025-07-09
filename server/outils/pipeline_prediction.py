@@ -1,6 +1,6 @@
 import pandas as pd
 from etl.youtube_extraction import extract_video_id, fetch_comment_threads
-from server.outils.cleaning_pipeline import clean_youtube_data
+from server.outils.pipeline_cleaning import clean_youtube_data
 import sys
 from pathlib import Path
 from server.database.save_comments import save_comments_batch

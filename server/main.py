@@ -1,13 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from server.schemas import VideoRequest, Comment  
+from server.schemas import VideoRequest, Comment, PredictionResponse
 from etl.youtube_extraction import extract_video_id, fetch_comment_threads 
 from server.outils.pipeline_prediction import predict_pipeline
 from server.schemas import PredictionResponse
 from server.database.save_comments import get_comments_by_video, delete_comments_by_video
 from typing import List
+from server.outils.pipeline_unified import UnifiedPipeline
 
+# -------------------------------------------------------------------------------------
 app = FastAPI()
+pipeline = UnifiedPipeline()
+# -------------------------------------------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,23 +20,58 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+# -------------------------------------------------------------------------------------
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI server!"}
-
+# -------------------------------------------------------------------------------------
 @app.post("/extract-comments/", response_model=List[Comment])
 def extract_comments_endpoint(request: VideoRequest):
     video_id = extract_video_id(request.url_or_id)
     comments = fetch_comment_threads(video_id)
     return comments
-
-# Endpoint predicción
+# -------------------------------------------------------------------------------------
+# Endpoint actualizado para usar pipeline_unified
 @app.post("/predict/", response_model=PredictionResponse)
 def predict_from_youtube(request: VideoRequest):
-    result = predict_pipeline(request.url_or_id, max_comments=request.max_comments)
-    return result
-
+    try:
+        # Reemplaza predict_pipeline con pipeline.process_comments
+        result = pipeline.process_comments(request.url_or_id, max_comments=request.max_comments)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+# -------------------------------------------------------------------------------------
+# Nuevo endpoint adicional para el pipeline completo
+@app.post("/full-analysis/", response_model=PredictionResponse)
+async def full_analysis(request: VideoRequest):
+    """Endpoint que usa todo el pipeline unificado con manejo detallado de errores"""
+    try:
+        print(f"🔍 Procesando URL: {request.url_or_id}")
+        result = pipeline.process_comments(request.url_or_id, request.max_comments)
+        
+        if not result.get("comments"):
+            print("⚠️ No se procesaron comentarios válidos")
+            raise HTTPException(
+                status_code=404,
+                detail="No se encontraron comentarios procesables"
+            )
+            
+        print(f"✅ Procesados {len(result['comments'])} comentarios")
+        return result
+        
+    except Exception as e:
+        print(f"❌ Error en full_analysis: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error en el procesamiento: {str(e)}"
+        ) from e
+# -------------------------------------------------------------------------------------
+# # Endpoint predicción
+# @app.post("/predict/", response_model=PredictionResponse)
+# def predict_from_youtube(request: VideoRequest):
+#     result = predict_pipeline(request.url_or_id, max_comments=request.max_comments)
+#     return result
+# -------------------------------------------------------------------------------------
 
 # Endpoint GET para los gráficos, se traen por video_id:
 @app.get("/stats/")
@@ -123,8 +162,7 @@ def get_stats(video_id: str, max_comments: int = 100):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
+# -------------------------------------------------------------------------------------   
 @app.get("/saved-comments/{video_id}")
 def get_saved_comments(video_id: str):
     """Recupera comentarios guardados de un video específico"""
@@ -137,7 +175,7 @@ def get_saved_comments(video_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+# -------------------------------------------------------------------------------------
 @app.delete("/saved-comments/{video_id}")
 def delete_saved_comments(video_id: str):
     """Elimina todos los comentarios guardados de un video"""
