@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Literal
 from datetime import datetime
 
 class VideoRequest(BaseModel):
@@ -34,9 +34,10 @@ class Comment(BaseModel):
     radicalism_probability: Optional[float]
     is_radicalism: Optional[bool]
 
+    
+    sentiment_type: Optional[Literal["positive", "negative", "neutral"]] = Field(default="neutral")
+    sentiment_intensity: Optional[Literal["weak", "moderate", "strong"]] = Field(default="weak")
     # Campos adicionales temporales
-    sentiment_type: Optional[str] = None
-    sentiment_intensity: Optional[float] = None
     is_self_promotional: Optional[bool] = None
     has_url: Optional[bool] = None
     has_tag: Optional[bool] = None

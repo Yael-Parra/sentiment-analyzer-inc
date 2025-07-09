@@ -1,3 +1,6 @@
+#
+.env
+=1.21.0
 # Node modules
 # UV 
 .python-version

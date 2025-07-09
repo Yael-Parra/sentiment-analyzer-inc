@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from server.schemas import VideoRequest, Comment  
 from etl.youtube_extraction import extract_video_id, fetch_comment_threads 
-from server.outils.prediction_pipeline import predict_pipeline
+from server.outils.pipeline_prediction import predict_pipeline
 from server.schemas import PredictionResponse
 from server.database.save_comments import get_comments_by_video, delete_comments_by_video
 from typing import List

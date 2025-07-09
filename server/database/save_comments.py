@@ -13,6 +13,7 @@ def save_comment(comment_data: Dict[str, Any]) -> Dict[str, Any] | None:
         # VALIDAR con schema Comment
         try:
             validated_comment = Comment(**comment_data)
+            print("Validated comment dict:", validated_comment.dict())
             print(f"🧪 Test input recibido: {comment_data}")
         except ValidationError as ve:
             print(f"⚠️ Error de validación: {ve}")
@@ -28,12 +29,13 @@ def save_comment(comment_data: Dict[str, Any]) -> Dict[str, Any] | None:
             "sexist_probability", "homophobic_probability", "radicalism_probability",
             "is_toxic", "is_hatespeech", "is_abusive", "is_provocative",
             "is_racist", "is_obscene", "is_threat", "is_religious_hate",
-            "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism"
+            "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism",
+            "sentiment_type", "sentiment_intensity"
         }
         
         # extraer campos de BD (sin id ni created_at)
-        filtered_data = {k: v for k, v in comment_dict.items() if k in db_fields and v is not None}
-        
+        filtered_data = {k: v for k, v in validated_comment.dict().items() if k in db_fields and v is not None}
+        print("Filtered data to insert:", filtered_data)
         print(f"🔄 Guardando comentario: {filtered_data['text'][:50]}...")
         response = supabase.table("sentiment_analyzer").insert(filtered_data).execute()
         print(f"🧪 Supabase mock response: {response.data}")
@@ -80,12 +82,13 @@ def save_comments_batch(comments_list: List[Dict[str, Any]]) -> List[Dict[str, A
         db_fields = {
             "video_id", "text",
             "toxic_probability", "hatespeech_probability", "abusive_probability",
-            "provocative_probability", "racist_probability", "obscene_probability", 
+            "provocative_probability", "racist_probability", "obscene_probability",
             "threat_probability", "religious_hate_probability", "nationalist_probability",
             "sexist_probability", "homophobic_probability", "radicalism_probability",
             "is_toxic", "is_hatespeech", "is_abusive", "is_provocative",
             "is_racist", "is_obscene", "is_threat", "is_religious_hate",
-            "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism"
+            "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism",
+            "sentiment_type", "sentiment_intensity"
         }
         
         # Prepara datos para inserción en lote
@@ -150,7 +153,7 @@ def delete_comments_by_video(video_id: str) -> bool:
 def test_save_function():
     """Función de prueba para verificar que el guardado funciona"""
     test_comment = {
-        "video_id": "test_12345",
+        "video_id": "es un string",
         "text": "Este es un comentario de prueba",
         "toxic_probability": 0.1,
         "is_toxic": False,

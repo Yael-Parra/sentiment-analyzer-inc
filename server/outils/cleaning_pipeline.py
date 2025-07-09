@@ -3,6 +3,7 @@ import re
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline
 from tqdm import tqdm
+from typing import Dict, Any
 
 # Initialize sentiment analysis tools once
 analyzer_en = SentimentIntensityAnalyzer()
@@ -236,7 +237,7 @@ self_promo_keywords = {
     ]
 }
 
-
+# ----------------------------------------------------------------
 def is_self_promotional(text):
     """Detect if text contains self-promotional content."""
     if not isinstance(text, str):
@@ -286,18 +287,21 @@ def remove_linebreaks_and_spaces(df, text_columns=['text']):
 
 # ----------------------------------------------------------------
 # Sentiment analysis
-def analyze_sentiment(text):
+def analyze_sentiment(text: str) -> Dict[str, Any]:
+    """
+    Analiza el sentimiento del texto y devuelve los resultados en formato 
+    compatible con el esquema Comment de Pydantic/Supabase.
+    """
     if not isinstance(text, str) or not text.strip():
-        return pd.Series({
+        return {
             'sentiment_type': 'neutral',
-            'sentiment_intensity': 0.0,
-            'sentiment_intensity_category': 'weak'
-        })
+            'sentiment_intensity': 'weak'  # Valor por defecto para texto vacío
+        }
 
     scores = analyzer_en.polarity_scores(text)
     compound = scores['compound']
     
-    # Sentiment type
+    # Determinar tipo de sentimiento
     if compound >= 0.05:
         sentiment_type = 'positive'
     elif compound <= -0.05:
@@ -305,21 +309,19 @@ def analyze_sentiment(text):
     else:
         sentiment_type = 'neutral'
     
-    sentiment_intensity = float(compound)
-    # Sentiment intensity, lo tuve que cambiar a float para las estadísticas
+    # Determinar intensidad (como string para el esquema)
     abs_score = abs(compound)
     if abs_score >= 0.6:
-        sentiment_intensity_category = 'strong'
+        sentiment_intensity = 'strong'
     elif abs_score >= 0.3:
-        sentiment_intensity_category = 'moderate'
+        sentiment_intensity = 'moderate'
     else:
-        sentiment_intensity_category = 'weak'
+        sentiment_intensity = 'weak'
     
-    return pd.Series({
+    return {
         'sentiment_type': sentiment_type,
-        'sentiment_intensity': sentiment_intensity,
-        'sentiment_intensity_category': sentiment_intensity_category
-    })
+        'sentiment_intensity': sentiment_intensity  # ¡Ya en el formato correcto!
+    }
 
 # ----------------------------------------------------------------
 # Main pipeline function by order of operations

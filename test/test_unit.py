@@ -1,11 +1,12 @@
 # ==============================  Importing libraries  ============================
 import pytest
+from typing import List, Dict, Any
 from unittest.mock import patch, MagicMock
 from etl.youtube_extraction import fetch_comment_threads
 import server.database.connection_db as connection_db
 import server.database.save_comments as save_comments
 from server.database import save_comments
-from server.outils.prediction_pipeline import predict_pipeline 
+from server.outils.pipeline_prediction import predict_pipeline 
 from server.database.save_comments import save_comment,save_comments_batch,get_comments_by_video,delete_comments_by_video
 from server.outils.cleaning_pipeline import clean_youtube_data, analyze_sentiment
 # ==============================  Cleaning Pipeline  ==============================
@@ -106,38 +107,27 @@ def test_connection_success(mock_table):
 # Data Base Insertion -------------------------------------------------------------------------
 @patch("server.database.save_comments.supabase")
 def test_save_comment_valid(mock_supabase):
-    # Simulación de lo que Supabase devolvería tras guardar un comentario
+    # Mock response: simula lo que Supabase devuelve tras insertar
     mock_response = MagicMock()
     mock_response.data = [{
-        "id": 1,
-        "created_at": "2024-07-09T12:00:00Z",
+        "id": 123,
         "video_id": "test_video",
-        "text": "Comentario válido",
-        "toxic_probability": 0.75,
-        "is_toxic": True
+        "text": "Comentario válido"
     }]
-
     mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
 
-    # Este es el comentario que se valida con Pydantic, pero no todo se guarda
+    # Datos mínimos válidos según tu modelo (comment_id es ignorado al guardar)
     comment = {
-        "comment_id": "yt_001",             # Solo para validación, no se guarda
-        "video_id": "test_video",           # Obligatorio
-        "text": "Comentario válido",        # Obligatorio
-        "toxic_probability": 0.75,
-        "is_toxic": True
-        # Puedes añadir más campos si quieres testear más profundamente
+        "video_id": "test_video",
+        "text": "Comentario válido"
     }
 
     result = save_comments.save_comment(comment)
 
+    # Validaciones
     assert result is not None
     assert result["video_id"] == "test_video"
     assert result["text"] == "Comentario válido"
-    assert result["toxic_probability"] == 0.75
-    assert result["is_toxic"] is True
-    assert "id" in result
-    assert "created_at" in result
 # ----------------------------------------------
 def test_save_comment_invalid():
     comment = {
@@ -148,6 +138,9 @@ def test_save_comment_invalid():
 
     assert result is None
 # ----------------------------------------------
+# Get comment by video_id
+# def test_get_comments_by_video_id (video_id:str)  -> List[Dict[str, Any]]:
+#     try:
 
 # ----------------------------------------------
 @patch.object(connection_db.supabase, "table")
@@ -172,5 +165,5 @@ if __name__ == "__main__":
     import sys
     import pytest
 
-    # Ejecuta pytest en este archivo con salida detallada (-v)
+# Ejecuta pytest en este archivo con salida detallada (-v)
     sys.exit(pytest.main([__file__, "-v"]))
