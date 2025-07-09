@@ -188,6 +188,7 @@ def extract_and_remove_urls(df, text_column='text'):
     # Extract URLs (store as list)
     df['extracted_urls'] = df[text_column].apply(
         lambda x: re.findall(r'https?://\S+|www\.\S+', str(x))
+    )
     
     # Remove URLs from text (keep everything else)
     df[text_column] = df[text_column].apply(
@@ -206,7 +207,7 @@ self_promo_keywords = {
     'en': [
         'check out my', 'subscribe to', 'follow me', 'visit my', 'link in bio',
         'watch my', 'support my', 'my channel', 'my content', 'please subscribe',
-        'giveaway on my', 'join my', 'don't forget to follow', 'my new video',
+        'giveaway on my', 'join my', 'dont forget to follow', 'my new video',
         'check my', 'like and subscribe', 'hit subscribe', 'sub to my',
         'drop a sub', 'my latest video', 'my socials', 'follow my', 'my page',
         'my profile', 'my website', 'my blog', 'my podcast', 'my merch'
@@ -343,5 +344,4 @@ if __name__ == "__main__":
     
     print("Original shape:", df.shape)
     print("Cleaned shape:", cleaned_df.shape)
-    print("Cleaned columns:", cleaned_df.columns.tolist())
-
+    print("Cleaned columns:", cleaned_df.columns.tolist()) 
