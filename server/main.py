@@ -18,16 +18,6 @@ app.add_middleware(
 def read_root():
     return {"message": "API is up and running 🚀"}
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI server!"}
-
-@app.post("/extract-comments/", response_model=List[Comment])
-def extract_comments_endpoint(request: VideoRequest):
-    video_id = extract_video_id(request.url_or_id)
-    comments = fetch_comment_threads(video_id)
-    return comments
-
 # Endpoint predicción
 @app.post("/predict/")
 def predict_from_youtube(request: VideoRequest):
