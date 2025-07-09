@@ -4,6 +4,7 @@ from server.schemas import VideoRequest, Comment
 from etl.youtube_extraction import extract_video_id, fetch_comment_threads 
 from server.outils.prediction_pipeline import predict_pipeline
 from server.schemas import PredictionResponse
+from server.database.save_comments import get_comments_by_video, delete_comments_by_video
 from typing import List
 
 app = FastAPI()
@@ -41,7 +42,6 @@ def get_stats(video_id: str, max_comments: int = 100):
         result = predict_pipeline(video_id, max_comments=max_comments)
         comments = result.get("comments", [])
         total_comments = result.get("total_comments", 0)
-        stats = result.get("stats", {})
 
         # 1. Cantidad total de comentarios
         cantidad_comentarios = total_comments
@@ -62,33 +62,50 @@ def get_stats(video_id: str, max_comments: int = 100):
 
         # 3. Sentimientos e intensidad:
         sentimientos = {
-            "mean_sentiment": None,
-            "max_sentiment": None
+            "mean_sentiment_intensity": None,
+            "sentiment_types_distribution": {},
         }
-        if comments and "sentiment" in comments[0]:
-            sentimientos["mean_sentiment"] = sum(c.get("sentiment", 0) for c in comments) / total_comments
-            sentimientos["max_sentiment"] = max(c.get("sentiment", 0) for c in comments)
+        if comments:
+            # Intensidad promedio (VADER score)
+            intensities = []
+            for c in comments:
+                intensity = c.get("sentiment_intensity", 0)
+                if isinstance(intensity, (int, float)):  # ← Solo números
+                    intensities.append(float(intensity))
+                elif isinstance(intensity, str):  # ← Si es string, convertir
+                    try:
+                        intensities.append(float(intensity))
+                    except ValueError:
+                        # Si no se puede convertir, usar 0
+                        intensities.append(0.0)
+
+            if intensities:
+                sentimientos["mean_sentiment_intensity"] = sum(intensities) / len(intensities)
+            
+            # Distribución de tipos de sentimiento
+            sentiment_counts = {}
+            for c in comments:
+                stype = c.get("sentiment_type", "neutral")
+                sentiment_counts[stype] = sentiment_counts.get(stype, 0) + 1
+            sentimientos["sentiment_types_distribution"] = sentiment_counts
 
         # 4. Porcentaje de comentarios con tags
-        tags = ["is_toxic", "is_hatespeech", "is_abusive", "is_provocative", "is_racist",
-                "is_obscene", "is_threat", "is_religious_hate", "is_nationalist",
-                "is_sexist", "is_homophobic", "is_radicalism"]
         tagged = sum(
-            any(c.get(tag) for tag in tags)
+            any(c.get(tag) for tag in etiquetas)
             for c in comments
         )
         porcentaje_tagged = (tagged / total_comments * 100) if total_comments else 0
 
 
         # 5. Mean y max de likes en comentarios
-        if comments and "likeCountComment" in comments[0]:
-            likes = [c.get("likeCountComment", 0) for c in comments]
-            mean_likes = sum(likes) / len(likes) if likes else 0
-            max_likes = max(likes) if likes else 0
-        else:
-            mean_likes = None
-            max_likes = None
+        likes = [c.get("like_count_comment", 0) for c in comments if c.get("like_count_comment") is not None]
+        mean_likes = sum(likes) / len(likes) if likes else 0
+        max_likes = max(likes) if likes else 0
 
+        # 6. Estadísticas de engagement
+        has_url_count = sum(1 for c in comments if c.get("has_url"))
+        has_tag_count = sum(1 for c in comments if c.get("has_tag"))
+        
         return {
             "video_id": video_id,
             "cantidad_comentarios": cantidad_comentarios,
@@ -97,6 +114,38 @@ def get_stats(video_id: str, max_comments: int = 100):
             "porcentaje_tagged": porcentaje_tagged,
             "mean_likes": mean_likes,
             "max_likes": max_likes,
+            "engagement_stats": {
+                "comments_with_urls": has_url_count,
+                "comments_with_tags": has_tag_count,
+                "url_percentage": (has_url_count / total_comments * 100) if total_comments else 0,
+                "tag_percentage": (has_tag_count / total_comments * 100) if total_comments else 0,
+            }
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.get("/saved-comments/{video_id}")
+def get_saved_comments(video_id: str):
+    """Recupera comentarios guardados de un video específico"""
+    try:
+        comments = get_comments_by_video(video_id)
+        return {
+            "video_id": video_id,
+            "total_saved_comments": len(comments),
+            "comments": comments
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/saved-comments/{video_id}")
+def delete_saved_comments(video_id: str):
+    """Elimina todos los comentarios guardados de un video"""
+    try:
+        success = delete_comments_by_video(video_id)
+        if success:
+            return {"message": f"Comentarios del video {video_id} eliminados correctamente"}
+        else:
+            raise HTTPException(status_code=500, detail="Error al eliminar comentarios")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
