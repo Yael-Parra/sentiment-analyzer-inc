@@ -345,15 +345,4 @@ def clean_youtube_data(df):
 
 # ----------------------------------------------------------------
 def process_youtube_comments(input_df: pd.DataFrame) -> pd.DataFrame:
-<<<<<<< HEAD
     return clean_youtube_data(input_df)
-=======
-    return clean_youtube_data(input_df)
-
-
-
-
-
-
-
->>>>>>> 2af708454118ece69804ec44c95a9f45aca45663

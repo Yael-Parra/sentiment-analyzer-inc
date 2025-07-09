@@ -1,13 +1,10 @@
-<<<<<<< HEAD
 # Node modules
-=======
 # UV 
 .python-version
 pyproject.toml
 uv.lock
 
 # node modules
->>>>>>> 2af708454118ece69804ec44c95a9f45aca45663
 node_modules
 
 # OS específicos
