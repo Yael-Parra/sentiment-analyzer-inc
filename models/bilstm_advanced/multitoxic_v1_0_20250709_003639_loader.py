@@ -609,7 +609,7 @@ class MultitoxicLoader:
         ).to(self.device)
         
         # Cargar pesos entrenados
-        checkpoint = torch.load(model_files[0], map_location=self.device)
+        checkpoint = torch.load(model_files[0], map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()
         
