@@ -1,26 +1,17 @@
-# Importing libraries -------------------------------------------------------------------------
+# ==============================  Importing libraries  ============================
 import pytest
-from server.outils.cleaning_pipeline import clean_text
-from server.outils.prediction_pipeline import predict_sentiment, predict_toxicity
-from unittest.mock import patch
-from server.database.connection_db import test_connection
 from unittest.mock import patch, MagicMock
-import server.database.connection_db as db
 from etl.youtube_extraction import fetch_comment_threads
-# --------------------------------------------------------------------------------------------
-def test_clean_text_removes_special_characters():
-    text = "Hello!!! 😡🔥🔥 This is... weird."
-    cleaned = clean_text(text)
-    assert "!" not in cleaned
-    assert "🔥" not in cleaned
-    assert "😡" not in cleaned
-# --------------------------------------------------------------------------------------------
-def test_predict_sentiment_format():
-    result = predict_sentiment("I hate everything.")
-    assert "sentiment" in result
-    assert result["sentiment"] in ["positive", "neutral", "negative"]
+import server.database.connection_db as connection_db
+import server.database.save_comments as save_comments
+from server.database import save_comments
+from server.outils.prediction_pipeline import predict_pipeline 
+from server.database.save_comments import save_comment,save_comments_batch,get_comments_by_video,delete_comments_by_video
+from server.outils.cleaning_pipeline import clean_youtube_data, analyze_sentiment
+# ==============================  Cleaning Pipeline  ==============================
 
-# YouTube Extraction --------------------------------------------------------------------------
+
+# =============================  YouTube Extraction  =============================
 @patch("etl.youtube_extraction.requests.get")
 def test_fetch_comment_threads(mock_get):
     # Simular respuesta de la API de YouTube
@@ -55,17 +46,131 @@ def test_fetch_comment_threads(mock_get):
     assert comments[0]["author"] == "Test User"
     assert comments[0]["text"] == "This is a test comment."
 
+# # =================================  Predictions  =================================
+# def test_predict_pipeline_mock_output_structure():
+#     result = predict_pipeline("dummy_url", max_comments=5)
 
+#     assert isinstance(result, dict)
+#     assert "video_id" in result
+#     assert "total_comments" in result
+#     assert result["total_comments"] == 5
+#     assert "stats" in result
+#     assert "comments" in result
+#     assert isinstance(result["comments"], list)
+#     assert len(result["comments"]) == 5
+
+#     comment = result["comments"][0]
+#     expected_keys = {
+#         "video_id", "text", "toxic_probability", "is_toxic",
+#         "hatespeech_probability", "is_hatespeech", "abusive_probability", "is_abusive",
+#         "provocative_probability", "is_provocative", "racist_probability", "is_racist",
+#         "obscene_probability", "is_obscene", "threat_probability", "is_threat",
+#         "religious_hate_probability", "is_religious_hate", "nationalist_probability", "is_nationalist",
+#         "sexist_probability", "is_sexist", "homophobic_probability", "is_homophobic",
+#         "radicalism_probability", "is_radicalism"
+#     }
+#     assert expected_keys.issubset(comment.keys())
+# Sentiments -----------------------------------------------------------------------------------
+def test_sentiment_vader():
+    # Positive text
+    result = analyze_sentiment("I love this product!")
+    assert result['sentiment_type'] == 'positive'
+    assert result['sentiment_intensity'] > 0
+
+    # Negative text
+    result = analyze_sentiment("I hate this so much.")
+    assert result['sentiment_type'] == 'negative'
+    assert result['sentiment_intensity'] < 0
+
+    # Neutral text
+    result = analyze_sentiment("It is a product.")
+    assert result['sentiment_type'] == 'neutral'
+    assert abs(result['sentiment_intensity']) < 0.05
+
+    # Empty string or non-string input should be neutral
+    result = analyze_sentiment("")
+    assert result['sentiment_type'] == 'neutral'
+    result = analyze_sentiment(None)
+    assert result['sentiment_type'] == 'neutral'
+# =============================  Data Base  =============================
 # Data Base Connection -------------------------------------------------------------------------
-
-@patch.object(db.supabase, "table")
-def test_test_connection_success(mock_table):
-    # Mock chain: .select().execute() → response.data = [{}]
-    mock_select = MagicMock()
+@patch.object(connection_db.supabase, "table")
+def test_connection_success(mock_table):
     mock_execute = MagicMock()
     mock_execute.data = [{}]
-    mock_select.execute.return_value = mock_execute
-    mock_table.return_value.select.return_value = mock_select
+    mock_table.return_value.select.return_value.execute.return_value = mock_execute
 
-    result = db.test_connection()
+    result = connection_db.test_connection()
     assert result is True
+
+# Data Base Insertion -------------------------------------------------------------------------
+@patch("server.database.save_comments.supabase")
+def test_save_comment_valid(mock_supabase):
+    # Simulación de lo que Supabase devolvería tras guardar un comentario
+    mock_response = MagicMock()
+    mock_response.data = [{
+        "id": 1,
+        "created_at": "2024-07-09T12:00:00Z",
+        "video_id": "test_video",
+        "text": "Comentario válido",
+        "toxic_probability": 0.75,
+        "is_toxic": True
+    }]
+
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = mock_response
+
+    # Este es el comentario que se valida con Pydantic, pero no todo se guarda
+    comment = {
+        "comment_id": "yt_001",             # Solo para validación, no se guarda
+        "video_id": "test_video",           # Obligatorio
+        "text": "Comentario válido",        # Obligatorio
+        "toxic_probability": 0.75,
+        "is_toxic": True
+        # Puedes añadir más campos si quieres testear más profundamente
+    }
+
+    result = save_comments.save_comment(comment)
+
+    assert result is not None
+    assert result["video_id"] == "test_video"
+    assert result["text"] == "Comentario válido"
+    assert result["toxic_probability"] == 0.75
+    assert result["is_toxic"] is True
+    assert "id" in result
+    assert "created_at" in result
+# ----------------------------------------------
+def test_save_comment_invalid():
+    comment = {
+        "text": "Falta el video_id"  # video_id es obligatorio según schema por lo que debería de ser inválido esto
+    }
+
+    result = save_comments.save_comment(comment)
+
+    assert result is None
+# ----------------------------------------------
+
+# ----------------------------------------------
+@patch.object(connection_db.supabase, "table")
+def test_get_comments_by_video(mock_table):
+    mock_response = MagicMock()
+    mock_response.data = [{"text": "Comentario 1"}, {"text": "Comentario 2"}]
+    mock_table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+
+    result = save_comments.get_comments_by_video("video_test")
+    assert len(result) == 2
+    assert result[0]["text"] == "Comentario 1"
+# ----------------------------------------------
+@patch.object(connection_db.supabase, "table")
+def test_delete_comments_by_video(mock_table):
+    mock_response = MagicMock()
+    mock_table.return_value.delete.return_value.eq.return_value.execute.return_value = mock_response
+
+    result = save_comments.delete_comments_by_video("video_test")
+    assert result is True
+# ----------------------------------------------
+if __name__ == "__main__":
+    import sys
+    import pytest
+
+    # Ejecuta pytest en este archivo con salida detallada (-v)
+    sys.exit(pytest.main([__file__, "-v"]))

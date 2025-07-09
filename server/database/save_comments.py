@@ -13,6 +13,7 @@ def save_comment(comment_data: Dict[str, Any]) -> Dict[str, Any] | None:
         # VALIDAR con schema Comment
         try:
             validated_comment = Comment(**comment_data)
+            print(f"🧪 Test input recibido: {comment_data}")
         except ValidationError as ve:
             print(f"⚠️ Error de validación: {ve}")
             return None
@@ -35,7 +36,8 @@ def save_comment(comment_data: Dict[str, Any]) -> Dict[str, Any] | None:
         
         print(f"🔄 Guardando comentario: {filtered_data['text'][:50]}...")
         response = supabase.table("sentiment_analyzer").insert(filtered_data).execute()
-        
+        print(f"🧪 Supabase mock response: {response.data}")
+
         if response.data:
             print(f"✅ Comentario guardado con ID: {response.data[0]['id']}")
             return response.data[0]

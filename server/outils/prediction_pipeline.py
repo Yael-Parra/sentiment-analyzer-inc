@@ -4,7 +4,6 @@ from server.outils.cleaning_pipeline import clean_youtube_data
 import sys
 from pathlib import Path
 from server.database.save_comments import save_comments_batch
-
 MODEL_DIR = Path("models/bilstm_advanced")
 sys.path.append(str(MODEL_DIR))
 
