@@ -94,9 +94,10 @@ const LinkAnalysis = () => {
         `${Math.round(data.toxicity_stats.average_toxicity * 100)}%` : '0%',
       
       // Engagement
-      avg_likes: data.engagement_stats?.mean_likes || 
-                (data.comments?.reduce((sum, c) => sum + (c.like_count || 0), 0) / data.comments?.length) || 
-                0,
+      avg_likes: data.engagement_stats?.mean_likes ??
+        (data.comments && data.comments.length > 0
+          ? data.comments.reduce((sum, c) => sum + (c.like_count || 0), 0) / data.comments.length
+          : 0),
       
       // Datos completos para las secciones
       sentimientos: {
