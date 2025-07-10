@@ -36,7 +36,8 @@ class Comment(BaseModel):
 
     # sentimientos
     sentiment_type: Optional[str] = None
-    sentiment_intensity: Optional[float] = None
+    sentiment_score: Optional[float] = None
+    sentiment_intensity: Optional[str] = None
 
     is_self_promotional: Optional[bool] = None
     has_url: Optional[bool] = None
@@ -54,7 +55,7 @@ class VideoStatistics(BaseModel):
     porcentaje_tagged: float
     mean_likes: float
     max_likes: int
-    mean_sentiment_intensity: Optional[float] = None
+    mean_sentiment_score: Optional[float] = None
     sentiment_distribution: Dict[str, int] = {}
     toxicity_stats: Dict[str, Dict[str, int]] = {}
     engagement_stats: Dict[str, Any] = {}

@@ -33,7 +33,8 @@ def _create_comment_from_error(video_id: str, row: pd.Series) -> Comment:
         text=row["text"],
         # Todos los Optional van a None automáticamente por Pydantic
         sentiment_type=row.get("sentiment_type", "neutral"),
-        sentiment_intensity=row.get("sentiment_intensity", 0.0),
+        sentiment_score=row.get("sentiment_score", 0.0),
+        sentiment_intensity=row.get("sentiment_intensity", "weak"), 
         is_self_promotional=row.get("is_self_promotional", False),
         has_url=row.get("has_url", False),
         has_tag=row.get("has_tag", False),
@@ -63,19 +64,25 @@ def _calculate_toxicity_stats(comments: List[Comment]) -> Dict[str, PredictionSt
 def _calculate_sentiment_stats(comments: List[Comment]) -> Dict[str, Any]:
   
     # ✅ USAR ATRIBUTOS DE OBJETOS COMMENT
-    sentiment_intensities = [c.sentiment_intensity for c in comments 
-                            if c.sentiment_intensity is not None]
-    mean_sentiment_intensity = (sum(sentiment_intensities) / len(sentiment_intensities) 
-                               if sentiment_intensities else 0.0)
+    sentiment_scores = [c.sentiment_score for c in comments 
+                       if c.sentiment_score is not None]  # ← ANTES: sentiment_intensity
+    mean_sentiment_score = (sum(sentiment_scores) / len(sentiment_scores) 
+                           if sentiment_scores else 0.0)  # ← ANTES: mean_sentiment_intensity
     
     sentiment_counts = {}
     for c in comments:
         stype = c.sentiment_type or "neutral"
         sentiment_counts[stype] = sentiment_counts.get(stype, 0) + 1
     
+    intensity_counts = {}
+    for c in comments:
+        intensity = c.sentiment_intensity or "weak"
+        intensity_counts[intensity] = intensity_counts.get(intensity, 0) + 1
+
     return {
-        "mean_sentiment_intensity": mean_sentiment_intensity,
-        "sentiment_types_distribution": sentiment_counts
+        "mean_sentiment_score": mean_sentiment_score,
+        "sentiment_types_distribution": sentiment_counts,
+        "sentiment_intensity_distribution": intensity_counts 
     }
 
 
@@ -153,7 +160,8 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
                 **{f"is_{field}": field in detected_types for field in TOXICITY_FIELDS},
                 # Análisis de sentimientos (del cleaning pipeline)
                 sentiment_type=row.get("sentiment_type"),
-                sentiment_intensity=row.get("sentiment_intensity"),
+                sentiment_score=row.get("sentiment_score"),
+                sentiment_intensity=row.get("sentiment_intensity"), 
                 # Campos adicionales
                 is_self_promotional=row.get("is_self_promotional"),
                 has_url=row.get("has_url"),
