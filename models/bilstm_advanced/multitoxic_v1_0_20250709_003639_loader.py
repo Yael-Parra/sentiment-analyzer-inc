@@ -13,39 +13,99 @@ import numpy as np
 import pickle
 import json
 import re
+# ============================ spaCy ============================
+import spacy
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    raise RuntimeError("spaCy model 'en_core_web_sm' not found. Please run: python -m spacy download en_core_web_sm")
+
 from sklearn.preprocessing import StandardScaler
 from pathlib import Path
+
+import re
 
 class MultitoxicProcessor:
     def __init__(self, processor_data_path):
         with open(processor_data_path, 'rb') as f:
             data = pickle.load(f)
-        
         self.word_to_idx = data['word_to_idx']
-        self.special_tokens = data['special_tokens']
+        self.special_tokens = data['special_tokens']  # {'<PAD>':0, ... '<RADICAL>':9}
         self.max_sequence_length = data['max_sequence_length']
-        self.discriminant_words = data['discriminant_words']
-        
+        self.discriminant_words = data['discriminant_words']  # dict c/ listas de palabras por categoría
         print(f"📝 Processor cargado: {len(self.word_to_idx)} palabras")
     
     def text_to_sequence(self, text):
+        # Manejo de casos no string o vacío
         if not isinstance(text, str):
-            return [], {
-                'caps_extreme_words': 0,
-                'caps_consecutive': 0,
-                'exclamation_groups': 0,
-                'repeated_chars': 0,
-                'sentence_complexity': 0,
-                'ellipsis_groups': 0,
-                'numbers_present': 0,
-                'total_caps_ratio': 0.0,
-                'emoji_like': 0
-            }
-
-        if text.strip() == "":
-            text = "..."
-
-        # Features visuales básicas - ✅ REGEX CORREGIDAS
+            return [], {}
+        text = text.strip()
+        if text == "":
+            text = "..."  # Representar texto vacío con algo de puntuación (como en entrenamiento)
+        
+        # ** Limpieza básica (como en entrenamiento avanzado) **
+        # Preservar puntuación básica (. , ! ? ; : ' " - @ #) y espacios, eliminar resto
+        processed = re.sub(r'[^\w\s.,!?;:\'"-@#]', ' ', text)
+        processed = re.sub(r'\s+', ' ', processed).strip()
+        
+        # ** Tokenización básica por regex **
+        # Separar palabras incluyendo dígitos (\w captura letras/números/_) 
+        raw_tokens = re.findall(r'\b\w+\b', processed)
+        
+        tokens = []
+        # ** Construcción de tokens con marcadores <CAPS> y <NUM> **
+        for word in raw_tokens:
+            if len(word) < 2:
+                # Omitir tokens muy cortos (e.g. "a", "I") como en entrenamiento
+                continue
+            if word.isupper() and word.isalpha() and len(word) >= 5:
+                # Palabra en MAYÚSCULAS (>=5 letras) -> indicador de grito
+                tokens.append('<CAPS>')
+                tokens.append(word.lower())
+            elif re.search(r'\d', word):
+                # Palabra contiene dígito(s) -> indicador numérico
+                tokens.append('<NUM>')
+                tokens.append(word.lower())
+            elif word.isalpha():
+                tokens.append(word.lower())
+            else:
+                # Si pasa aquí, es un token alfanumérico con algún símbolo (poco probable tras limpieza)
+                tokens.append(word.lower())
+        
+        # ** Inserción de tokens especiales por categorías tóxicas **
+        text_lower = processed.lower()
+        # Múltiples exclamaciones seguidas (!!): usar visual_features calculado abajo o regex directa
+        if re.search(r'!{2,}', text_lower):
+            tokens.append('<EXCL>')
+        # Discriminant words for specific categories
+        for vocab_type, word_list in self.discriminant_words.items():
+            # Map discriminant_words key to corresponding special token if applicable
+            if vocab_type == 'hatespeech_words':
+                token_label = '<HATE>'
+            elif vocab_type == 'racist_words':
+                token_label = '<RACIST>'
+            elif vocab_type == 'abusive_words':
+                token_label = '<ABUSIVE>'
+            elif vocab_type == 'threat_words':
+                token_label = '<THREAT>'
+            elif vocab_type == 'radicalism_words':
+                token_label = '<RADICAL>'
+            else:
+                token_label = None
+            if token_label:
+                # Si cualquiera de las palabras indicadoras aparece como palabra completa en el texto, añadimos token
+                for w in word_list:
+                    if re.search(rf'\b{re.escape(w)}\b', text_lower):
+                        tokens.append(token_label)
+                        break  # agregar sólo una vez por categoría
+        # ** Convertir tokens a índices del vocabulario (word_to_idx) **
+        sequence = [self.word_to_idx.get(tok, self.word_to_idx['<UNK>']) for tok in tokens]
+        # Padding/Truncamiento a max_sequence_length
+        if len(sequence) < self.max_sequence_length:
+            sequence += [self.word_to_idx['<PAD>']] * (self.max_sequence_length - len(sequence))
+        else:
+            sequence = sequence[:self.max_sequence_length]
+        # Calcular features visuales básicas (regex) como en entrenamiento
         visual_features = {
             'caps_extreme_words': len(re.findall(r'\b[A-Z]{5,}\b', text)),
             'caps_consecutive': len(re.findall(r'[A-Z]{3,}', text)),
@@ -57,195 +117,138 @@ class MultitoxicProcessor:
             'total_caps_ratio': len(re.findall(r'[A-Z]', text)) / max(len(text), 1),
             'emoji_like': len(re.findall(r'[😀-🙏🌀-🗿🚀-🛿]+', text))
         }
-        
-        # Tokenización básica - ✅ REGEX CORREGIDA
-        tokens = []
-        words = re.findall(r'\b\w+\b', text)
-        
-        for word in words:
-            if len(word) >= 2:
-                if word.isupper() and len(word) >= 5:
-                    tokens.extend(['<CAPS>', word.lower()])
-                elif re.search(r'\d', word):  # ✅ REGEX CORREGIDA
-                    tokens.extend(['<NUM>', word.lower()])
-                else:
-                    tokens.append(word.lower())
-        
-        # Convertir a secuencia
-        sequence = []
-        for token in tokens:
-            if token in self.word_to_idx:
-                sequence.append(self.word_to_idx[token])
-            else:
-                sequence.append(self.word_to_idx['<UNK>'])
-        
-        # Padding/truncating
-        if len(sequence) > self.max_sequence_length:
-            sequence = sequence[:self.max_sequence_length]
-        
-        return sequence, visual_features
+        return sequence, visual_features, tokens 
 
 class MultitoxicExtractor:
     def __init__(self, features_data_path):
         with open(features_data_path, 'rb') as f:
             data = pickle.load(f)
-        
         self.feature_names = data['feature_names']
-        self.discriminant_vocabularies = data['discriminant_vocabularies']
-        
-        # Recrear scaler
-        self.scaler = StandardScaler()
-        scaler_state = data['scaler_state']
-        self.scaler.mean_ = scaler_state['mean_']
-        self.scaler.scale_ = scaler_state['scale_']
-        self.scaler.var_ = scaler_state['var_']
-        self.scaler.n_features_in_ = scaler_state['n_features_in_']
-        self.scaler.n_samples_seen_ = scaler_state['n_samples_seen_']
-        
+        self.scaler = data.get('scaler', None) or data.get('scaler_state', None)
         print(f"🔧 Extractor cargado: {len(self.feature_names)} features")
-    
+
     def extract_features(self, text, processor):
+        sequence, visual_features, tokens = processor.text_to_sequence(text)
+        words = [w for w in tokens if not w.startswith('<')]
+        
         features = {}
-        
-        tokens, visual_features = processor.text_to_sequence(text)
-        words = text.lower().split()
-        
         # Features básicas
         features['text_length'] = len(text)
         features['word_count'] = len(words)
         features['char_count'] = len(text)
-        features['avg_word_length'] = np.mean([len(word) for word in words]) if words else 0
-        
+        features['avg_word_length'] = np.mean([len(w) for w in words]) if words else 0
         # Diversidad léxica
         unique_words = set(words)
         features['lexical_diversity'] = len(unique_words) / max(len(words), 1)
         features['vocab_richness'] = len(unique_words) / max(features['word_count'], 1)
         features['repetition_ratio'] = 1 - (len(unique_words) / max(len(words), 1))
-        
-        # Features visuales
-        for vf_name, vf_value in visual_features.items():
-            features[f'visual_{vf_name}'] = vf_value
-        
-        # Features de agresividad visual - ✅ REGEX CORREGIDA
+        # Features visuales básicas y derivadas
+        for vf_name, vf_val in visual_features.items():
+            features[f'visual_{vf_name}'] = vf_val
         features['caps_extreme_count'] = visual_features['caps_extreme_words']
         features['caps_extreme_ratio'] = features['caps_extreme_count'] / max(features['word_count'], 1)
         features['caps_total_ratio'] = visual_features['total_caps_ratio']
         features['caps_words_count'] = len(re.findall(r'\b[A-Z]{2,}\b', text))
         features['caps_vs_total_ratio'] = features['caps_words_count'] / max(features['word_count'], 1)
-        
         # Features emocionales
         features['exclamation_count'] = text.count('!')
         features['exclamation_ratio'] = features['exclamation_count'] / max(len(text), 1)
         features['multiple_exclamation'] = visual_features['exclamation_groups']
         features['question_marks'] = text.count('?')
         features['multiple_question'] = len(re.findall(r'\?{2,}', text))
-        
         # Features de elaboración
         features['ellipsis_count'] = visual_features['ellipsis_groups']
         features['repeated_chars'] = visual_features['repeated_chars']
         features['sentence_count'] = len([s for s in re.split(r'[.!?]+', text) if s.strip()])
         features['avg_sentence_length'] = features['word_count'] / max(features['sentence_count'], 1)
-        
-        # Vocabularios discriminantes
+        # Vocabularios discriminantes (conteos y ratios)
         text_lower = text.lower()
-        for vocab_type, word_list in self.discriminant_vocabularies.items():
-            count = sum(text_lower.count(word) for word in word_list)
+        for vocab_type, word_list in processor.discriminant_words.items():
+            count = sum(text_lower.count(w) for w in word_list)
             features[f'{vocab_type}_count'] = count
             features[f'{vocab_type}_ratio'] = count / max(features['word_count'], 1)
             features[f'has_{vocab_type}'] = count > 0
-        
-        # Tokens especiales
-        features['special_tokens_count'] = sum(1 for token in tokens if isinstance(token, str) and token.startswith('<'))
-        features['caps_tokens'] = 1 if '<CAPS>' in str(tokens) else 0
-        features['hate_tokens'] = 0
-        features['abusive_tokens'] = 0
-        features['threat_tokens'] = 0
-        features['racist_tokens'] = 0
-        features['radical_tokens'] = 0
-        features['excl_tokens'] = 0
-        features['num_tokens'] = 1 if '<NUM>' in str(tokens) else 0
-        
+        # Tokens especiales (recontados correctamente)
+        features['special_tokens_count'] = sum(1 for tok in tokens if tok.startswith('<'))
+        features['caps_tokens'] = tokens.count('<CAPS>')
+        features['hate_tokens'] = tokens.count('<HATE>')
+        features['abusive_tokens'] = tokens.count('<ABUSIVE>')
+        features['threat_tokens'] = tokens.count('<THREAT>')
+        features['racist_tokens'] = tokens.count('<RACIST>')
+        features['radical_tokens'] = tokens.count('<RADICAL>')
+        features['excl_tokens'] = tokens.count('<EXCL>')
+        features['num_tokens'] = tokens.count('<NUM>')
         # Complejidad sintáctica
-        if len(words) > 0:
-            word_lengths = [len(word) for word in words]
-            features['word_length_std'] = np.std(word_lengths)
-            features['word_length_max'] = max(word_lengths)
-            features['word_length_min'] = min(word_lengths)
+        if words:
+            lengths = [len(w) for w in words]
+            features['word_length_std'] = np.std(lengths)
+            features['word_length_max'] = max(lengths)
+            features['word_length_min'] = min(lengths)
             features['long_words_ratio'] = sum(1 for w in words if len(w) > 6) / len(words)
             features['short_words_ratio'] = sum(1 for w in words if len(w) <= 3) / len(words)
             features['medium_words_ratio'] = sum(1 for w in words if 4 <= len(w) <= 6) / len(words)
         else:
-            for key in ['word_length_std', 'word_length_max', 'word_length_min',
-                       'long_words_ratio', 'short_words_ratio', 'medium_words_ratio']:
-                features[key] = 0
-        
-        # Patterns específicos - ✅ REGEX CORREGIDAS
+            for k in ['word_length_std','word_length_max','word_length_min',
+                      'long_words_ratio','short_words_ratio','medium_words_ratio']:
+                features[k] = 0
+        # Patterns específicos
         features['has_urls'] = bool(re.search(r'http[s]?://', text))
         features['has_mentions'] = bool(re.search(r'@\w+', text))
         features['has_hashtags'] = bool(re.search(r'#\w+', text))
         features['has_numbers'] = bool(re.search(r'\d+', text))
         features['numbers_count'] = visual_features['numbers_present']
-        
         # Densidad
         features['punct_density'] = (text.count('!') + text.count('?') + text.count('.')) / max(len(text), 1)
-        features['special_chars_count'] = len(re.findall(r"[!@#$%^&*()_+={}|\\:\";'<>?,./]", text))
+        features['special_chars_count'] = len(re.findall(r"[!@#$%^&*()_+={}|\":;'<>?,./]", text))
         features['special_chars_density'] = features['special_chars_count'] / max(len(text), 1)
-        
-        # Multi-label features (simuladas)
+        # Multi-label features simuladas (quedan en 0, no tenemos info de etiquetas en predicción)
         features['toxicity_types_count'] = 0
         features['is_multi_toxic'] = False
         features['toxicity_intensity'] = 0.0
         features['has_toxic_and_specific'] = False
         features['toxic_only'] = False
-        
-        # Categorías estimadas
-        identity_indicators = sum(features.get(f'{vocab}_count', 0) for vocab in 
-                                 ['racist_words', 'sexist_words', 'homophobic_words', 
-                                  'religious_hate_words', 'nationalist_words'])
-        behavior_indicators = sum(features.get(f'{vocab}_count', 0) for vocab in 
-                                 ['abusive_words', 'provocative_words', 'threat_words', 'radicalism_words'])
-        content_indicators = sum(features.get(f'{vocab}_count', 0) for vocab in 
-                                ['obscene_words', 'hatespeech_words'])
-        
-        features['identity_attacks_count'] = min(identity_indicators, 5)
-        features['behavior_attacks_count'] = min(behavior_indicators, 4)
-        features['content_attacks_count'] = min(content_indicators, 2)
+        # Categorías estimadas (usando conteos calculados arriba)
+        identity_ind = sum(features.get(f'{v}_count', 0) for v in ['racist_words','sexist_words','homophobic_words','religious_hate_words','nationalist_words'])
+        behavior_ind = sum(features.get(f'{v}_count', 0) for v in ['abusive_words','provocative_words','threat_words','radicalism_words'])
+        content_ind = sum(features.get(f'{v}_count', 0) for v in ['obscene_words','hatespeech_words'])
+        features['identity_attacks_count'] = min(identity_ind, 5)
+        features['behavior_attacks_count'] = min(behavior_ind, 4)
+        features['content_attacks_count'] = min(content_ind, 2)
         features['has_multiple_identity'] = features['identity_attacks_count'] >= 2
         features['has_multiple_behavior'] = features['behavior_attacks_count'] >= 2
-        features['has_mixed_categories'] = (features['identity_attacks_count'] > 0 and 
-                                           features['behavior_attacks_count'] > 0)
-        
+        features['has_mixed_categories'] = (features['identity_attacks_count'] > 0 and features['behavior_attacks_count'] > 0)
         # Coherencia y estructura
         punct_chars = len(re.findall(r'[.!?,;:]', text))
         features['punctuation_complexity'] = punct_chars / max(len(text), 1)
-        
-        argument_words = ['because', 'since', 'therefore', 'however', 'but', 'although']
-        features['argument_markers'] = sum(1 for word in argument_words if word in text_lower)
+        arg_words = ['because','since','therefore','however','but','although']
+        features['argument_markers'] = sum(1 for w in arg_words if w in text_lower)
         features['has_argumentation'] = features['argument_markers'] > 0
-        
         # Patterns únicos
-        threat_patterns = ['will', 'gonna', 'going to', 'watch out', 'wait']
-        features['threat_pattern_count'] = sum(1 for pattern in threat_patterns if pattern in text_lower)
-        
-        nationalist_patterns = ['america', 'country', 'nation', 'patriot', 'flag']
-        features['nationalist_pattern_count'] = sum(1 for pattern in nationalist_patterns if pattern in text_lower)
-        
-        # Distribución
+        threat_patterns = ['will','gonna','going to','watch out','wait']
+        features['threat_pattern_count'] = sum(1 for pat in threat_patterns if pat in text_lower)
+        nationalist_patterns = ['america','country','nation','patriot','flag']
+        features['nationalist_pattern_count'] = sum(1 for pat in nationalist_patterns if pat in text_lower)
+        # Distribución de mayúsculas en bloques de 10 caracteres
         if len(text) > 20:
-            text_chunks = [text[i:i+10] for i in range(0, len(text), 10)]
-            caps_distribution = [len(re.findall(r'[A-Z]', chunk)) for chunk in text_chunks]
-            features['caps_distribution_std'] = np.std(caps_distribution) if caps_distribution else 0
-            features['caps_max_concentration'] = max(caps_distribution) if caps_distribution else 0
+            chunks = [text[i:i+10] for i in range(0, len(text), 10)]
+            caps_counts = [len(re.findall(r'[A-Z]', chunk)) for chunk in chunks]
+            features['caps_distribution_std'] = float(np.std(caps_counts))
+            features['caps_max_concentration'] = max(caps_counts) if caps_counts else 0
         else:
-            features['caps_distribution_std'] = 0
+            features['caps_distribution_std'] = 0.0
             features['caps_max_concentration'] = 0
-        
-        # Asegurar orden correcto
+        # Ordenar según feature_names original
         feature_array = np.array([features.get(name, 0) for name in self.feature_names])
         return feature_array
     
     def normalize_features(self, features_array):
-        return self.scaler.transform(features_array.reshape(1, -1))[0]
+        """
+        Normaliza los features usando el scaler cargado desde features_data.pkl
+        """
+        if hasattr(self, 'scaler') and self.scaler is not None:
+            return self.scaler.transform([features_array])[0]  # Devuelve array normalizado 1D
+        else:
+            raise RuntimeError("❌ El extractor no contiene un scaler válido.")
 
 class MultitoxicModel(nn.Module):
     def __init__(self, config):
@@ -457,7 +460,6 @@ class MultitoxicLoader:
         try:
             # ✅ CORRECCIÓN: Manejar texto vacío apropiadamente
             if not isinstance(text, str) or text.strip() == "":
-                # Para texto vacío, retornar estructura completa con predicciones
                 empty_predictions = {}
                 class_names = self.config['classes']['class_names']
                 thresholds = self.config['thresholds']
@@ -474,28 +476,25 @@ class MultitoxicLoader:
                     'is_multi_toxic': False,
                     'total_types': 0,
                     'severity': 'clean',
-                    'predictions': empty_predictions
+                    'predictions': empty_predictions,
+                    'probabilities': {k: 0.0 for k in class_names}  
                 }
-                
-                if return_probabilities:
-                    result['probabilities'] = {k: 0.0 for k in class_names}
-                
                 return result
+
+            # Process text (correctly unpacking three values)
+            sequence, visual_features, tokens_list = self.processor.text_to_sequence(text)
             
-            # Process text
-            tokens, visual_features = self.processor.text_to_sequence(text)
-            
-            # Extract features
+            # Extract features for numeric part
             features_array = self.feature_extractor.extract_features(text, self.processor)
-            normalized_features = self.feature_extractor.normalize_features(features_array)
+            normalized_features = self.feature_extractor.scaler.transform([features_array])[0]
             
-            # Prepare tensors
-            if len(tokens) < self.processor.max_sequence_length:
-                tokens += [0] * (self.processor.max_sequence_length - len(tokens))
-            elif len(tokens) > self.processor.max_sequence_length:
-                tokens = tokens[:self.processor.max_sequence_length]
+            # Prepare text sequence tensor (ensure correct length)
+            if len(sequence) < self.processor.max_sequence_length:
+                sequence += [0] * (self.processor.max_sequence_length - len(sequence))
+            elif len(sequence) > self.processor.max_sequence_length:
+                sequence = sequence[:self.processor.max_sequence_length]
             
-            text_tensor = torch.tensor([tokens], dtype=torch.long, device=self.device)
+            text_tensor = torch.tensor([sequence], dtype=torch.long, device=self.device)
             features_tensor = torch.from_numpy(np.array([normalized_features])).float().to(self.device)
             attention_mask = (text_tensor != 0).float()
             
@@ -544,13 +543,17 @@ class MultitoxicLoader:
             return result
             
         except Exception as e:
+            class_names = self.config['classes']['class_names']
             return {
                 'detected_types': [],
                 'is_multi_toxic': False,
                 'total_types': 0,
                 'severity': 'error',
-                'error': str(e)
+                'error': str(e),
+                'probabilities': {k: 0.0 for k in class_names},
+                'predictions': {k: {'probability': 0.0, 'detected': False, 'threshold': 0.5} for k in class_names}
             }
+
 
 if __name__ == "__main__":
     print("🚀 TESTING MULTITOXIC")

@@ -144,18 +144,18 @@
     "sequence_length": 50
   },
   "thresholds": {
-    "toxic": 0.35,
-    "hatespeech": 0.35,
-    "abusive": 0.08,
-    "threat": 0.3,
-    "provocative": 0.5,
-    "obscene": 0.2,
-    "racist": 0.35,
-    "nationalist": 0.35,
-    "sexist": 0.25,
-    "homophobic": 0.45,
-    "religious_hate": 0.45,
-    "radicalism": 0.3
+    "toxic": 0.5,
+    "hatespeech": 0.4,
+    "abusive": 0.4,
+    "threat": 0.2,
+    "provocative": 0.6,
+    "obscene": 0.5,
+    "racist": 0.3,
+    "nationalist": 0.4,
+    "sexist": 0.3,
+    "homophobic": 0.3,
+    "religious_hate": 0.3,
+    "radicalism": 0.2
   },
   "class_weights": [
     1.1706146001815796,
