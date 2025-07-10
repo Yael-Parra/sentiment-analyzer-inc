@@ -10,9 +10,7 @@ from typing import List, Dict, Any
 MODEL_DIR = Path("models/bilstm_advanced")
 sys.path.append(str(MODEL_DIR))
 
-# Importamos el loader del modelo
 from multitoxic_v1_0_20250709_003639_loader import MultitoxicLoader
-
 
 print("🔄 Inicializando modelo MULTITOXIC...")
 try:
