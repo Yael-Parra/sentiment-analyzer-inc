@@ -9,7 +9,8 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/link-analysis" element={<LinkAnalysis />} />
-      <Route path="/statistics/:videoId" element={<Statistics />} />
+      <Route path="/statistics" element={<div>Por favor, selecciona un video para ver estadísticas.</div>} />
+      <Route path="/statistics/:video_id" element={<Statistics />} />
       <Route path="*" element={<div>Not Found</div>} />
     </Routes>
   );
