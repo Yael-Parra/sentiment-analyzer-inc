@@ -180,21 +180,41 @@ class UnifiedPipeline:
             return self._get_default_toxicity_values()
 
     def _calculate_stats(self, comments: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Calcula estadísticas de toxicidad"""
         stats = {}
-        toxic_fields = [
-            "toxic", "hatespeech", "abusive", "provocative", "racist", 
-            "obscene", "threat", "religious_hate", "nationalist", 
-            "sexist", "homophobic", "radicalism"
-        ]
-        
+        # 1. Métricas de toxicidad (existente)
+        toxic_fields = ["toxic", "hatespeech", ...]
         for field in toxic_fields:
             count = sum(1 for c in comments if c.get(f"is_{field}", False))
             stats[field] = {
                 "count": count,
                 "percentage": (count / len(comments)) * 100 if comments else 0
             }
+        
+        # 2. Temporalidad (nuevo)
+        if comments and "time_of_day" in comments[0]:
+            stats["optimal_time"] = self._calculate_optimal_time(comments)
+        
         return stats
+
+    def _calculate_optimal_time(self, comments: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calcula las horas con menor toxicidad"""
+        from collections import defaultdict
+        hourly_toxicity = defaultdict(list)
+        
+        for c in comments:
+            hour = c.get("time_of_day")
+            if hour is not None:
+                hourly_toxicity[hour].append(c.get("is_toxic", False))
+        
+        # Calcula el % de toxicidad por hora
+        optimal_hours = {
+            hour: sum(toxics) / len(toxics) 
+            for hour, toxics in hourly_toxicity.items()
+        }
+        
+        # Retorna las 3 horas menos tóxicas
+        best_hours = sorted(optimal_hours.items(), key=lambda x: x[1])[:3]
+        return {"best_hours": [h[0] for h in best_hours]}
 
     def _save_to_db(self, comments: List[Dict[str, Any]]):
         """Guarda solo los campos necesarios en Supabase"""
