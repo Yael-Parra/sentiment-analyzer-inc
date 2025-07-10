@@ -52,30 +52,85 @@ const LinkAnalysis = () => {
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!videoUrl.trim()) {
-      setError('Por favor, ingresa una URL de YouTube válida');
-      return;
+ const handleAnalyze = async () => {
+  if (!videoUrl.trim()) {
+    setError('Por favor, ingresa una URL de YouTube válida');
+    return;
+  }
+
+  if (!isValidYouTubeUrl(videoUrl)) {
+    setError('La URL de YouTube no es válida');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+  setAnalysisData(null); // Resetear datos anteriores
+
+  try {
+    console.log("Iniciando análisis..."); // Debug
+    const data = await analyzeYouTubeVideo(videoUrl, maxComments);
+    console.log("Datos recibidos:", data); // Debug
+    
+    if (!data) {
+      throw new Error("No se recibieron datos del servidor");
     }
 
-    if (!isValidYouTubeUrl(videoUrl)) {
-      setError('La URL de YouTube no es válida');
-      return;
+    // Validación de estructura mínima
+    if (!data.total_comments && !data.toxicity_stats) {
+      console.warn("Datos incompletos recibidos:", data);
+      throw new Error("Los datos recibidos están incompletos");
     }
 
-    setLoading(true);
-    setError('');
+    setAnalysisData({
+      // Datos principales
+      total_comments: data.total_comments || 0,
+      
+      // Toxicidad
+      toxic_comments: data.toxicity_stats?.toxic_count || 
+                     data.barras_toxicidad?.is_toxic?.true || 
+                     0,
+      general_toxicity_level: data.toxicity_stats?.average_toxicity ?
+        `${Math.round(data.toxicity_stats.average_toxicity * 100)}%` : '0%',
+      
+      // Engagement
+      avg_likes: data.engagement_stats?.mean_likes || 
+                (data.comments?.reduce((sum, c) => sum + (c.like_count || 0), 0) / data.comments?.length) || 
+                0,
+      
+      // Datos completos para las secciones
+      sentimientos: {
+        sentiment_types_distribution: data.sentiment_distribution || 
+                                    data.sentimientos?.sentiment_types_distribution || 
+                                    { positive: 0, negative: 0, neutral: 0 }
+      },
+      barras_toxicidad: data.toxicity_stats || 
+                       data.barras_toxicidad || 
+                       { is_toxic: { true: 0, false: 0 } },
+      engagement_stats: data.engagement_stats || {
+        comments_with_urls: 0,
+        url_percentage: 0,
+        mean_likes: 0,
+        total_likes: 0
+      },
+      comentarios: data.comments || []
+    });
 
-    try {
-      const data = await analyzeYouTubeVideo(videoUrl, maxComments);
-      setAnalysisData(data);
-      setActiveTab('results');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setActiveTab('results');
+  } catch (err) {
+    console.error("Error en handleAnalyze:", err);
+    setError(err.message || "Ocurrió un error al analizar el video");
+    
+    // Mostrar datos de debug en UI
+    setAnalysisData({
+      total_comments: 0,
+      error: err.message,
+      rawData: err.response?.data // Si usas axios
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleGetSavedComments = async () => {
     if (!videoUrl.trim()) {
@@ -139,8 +194,7 @@ const LinkAnalysis = () => {
     const icons = {
       'positive': '😊',
       'negative': '😞',
-      'neutral': '😐',
-      'compound': '🤔'
+      'neutral': '😐'
     };
     return icons[sentiment?.toLowerCase()] || '🤔';
   };
