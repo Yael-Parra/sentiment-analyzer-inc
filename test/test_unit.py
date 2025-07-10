@@ -1,5 +1,7 @@
 # ==============================  Importing libraries  ============================
 import pytest
+import pandas as pd
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from typing import List, Dict, Any
 from unittest.mock import patch, MagicMock
 from etl.youtube_extraction import fetch_comment_threads
@@ -9,8 +11,40 @@ from server.database import save_comments
 from server.outils.pipeline_prediction import predict_pipeline 
 from server.database.save_comments import save_comment,save_comments_batch,get_comments_by_video,delete_comments_by_video
 from server.outils.pipeline_cleaning import clean_youtube_data, analyze_sentiment
+from server.outils.pipeline_unified import UnifiedPipeline
 # ==============================  Cleaning Pipeline  ==============================
-
+def test_pipeline():
+    print("🚀 Iniciando pruebas del UnifiedPipeline...")
+    pipeline = UnifiedPipeline()
+    
+    # Datos de prueba COMPLETOS que simulan la salida real de clean_youtube_data
+    test_data = {
+        "text": ["Great video!", "Bad content"],
+        "sentiment_type": ["positive", "negative"],  # Columnas requeridas
+        "sentiment_intensity": ["strong", "moderate"],
+        "published_at_comment": pd.to_datetime(["2024-01-01 12:00", "2024-01-01 18:00"]),
+        "is_self_promotional": [False, False]
+    }
+    
+    # Convertir a DataFrame
+    df_clean = pd.DataFrame(test_data)
+    
+    print("\n🧪 Probando _enrich_comments() con datos COMPLETOS")
+    enriched = pipeline._enrich_comments(df_clean, "test_video")
+    
+    if not enriched:
+        print("❌ Falla - Lista vacía")
+        return False
+    
+    print(f"✅ Comentarios enriquecidos: {len(enriched)}")
+    print("Muestra:", enriched[0])
+    
+    # Prueba de stats
+    print("\n🧪 Probando _calculate_stats()")
+    stats = pipeline._calculate_stats(enriched)
+    print("Estadísticas generadas:", stats.keys())
+    
+    return True
 
 # =============================  YouTube Extraction  =============================
 @patch("etl.youtube_extraction.requests.get")
