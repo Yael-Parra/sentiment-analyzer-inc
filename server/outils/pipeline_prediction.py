@@ -10,6 +10,10 @@ sys.path.append(str(MODEL_DIR))
 # Importamos el loader del modelo
 from multitoxic_v1_0_20250709_003639_loader import MultitoxicLoader
 
+print("Inicializando analizador de sentimientos...")
+sentiment_analyzer = SentimentIntensityAnalyzer()
+print("Analizador de sentimientos listo")
+
 print("🔄 Inicializando modelo MULTITOXIC...")
 try:
     model_loader = MultitoxicLoader(MODEL_DIR)
@@ -53,6 +57,22 @@ def predict_pipeline(youtube_url_or_id, max_comments=100):
                 return_probabilities=True, 
                 return_categories=False
             )
+            # ANÁLISIS DE SENTIMIENTOS POR COMENTARIO
+            text = row["text"]
+            sentiment_scores = sentiment_analyzer.polarity_scores(text)
+            
+            # Determinar sentiment_type basado en compound score
+            compound = sentiment_scores['compound']
+            if compound >= 0.05:
+                sentiment_type = 'positive'
+            elif compound <= -0.05:
+                sentiment_type = 'negative'
+            else:
+                sentiment_type = 'neutral'
+            
+            # sentiment_intensity es el compound score
+            sentiment_intensity = compound
+
             # Extraer resultados del modelo
             probs = prediction.get("probabilities", {})
             detected_types = prediction.get("detected_types", [])
@@ -85,9 +105,9 @@ def predict_pipeline(youtube_url_or_id, max_comments=100):
                 "is_sexist": "sexist" in detected_types,
                 "is_homophobic": "homophobic" in detected_types,
                 "is_radicalism": "radicalism" in detected_types,
-                # CAMPOS ADICIONALES DE LIMPIEZA
                 "sentiment_type": row.get("sentiment_type"),
                 "sentiment_intensity": row.get("sentiment_intensity"),
+                # Campos adicionales
                 "is_self_promotional": row.get("is_self_promotional"),
                 "has_url": row.get("has_url"),
                 "has_tag": row.get("has_tag"),
@@ -137,6 +157,34 @@ def predict_pipeline(youtube_url_or_id, max_comments=100):
             "percentage": (positives / total_comments * 100) if total_comments else 0
         }
 
+        # 🆕 ESTADÍSTICAS DE SENTIMIENTOS AGREGADAS
+    sentiment_intensities = [c.get("sentiment_intensity", 0) for c in enriched_comments if c.get("sentiment_intensity") is not None]
+    mean_sentiment_intensity = sum(sentiment_intensities) / len(sentiment_intensities) if sentiment_intensities else 0
+    
+    sentiment_counts = {}
+    for c in enriched_comments:
+        stype = c.get("sentiment_type", "neutral")
+        sentiment_counts[stype] = sentiment_counts.get(stype, 0) + 1
+
+    # Crear objeto de estadísticas completas para guardar
+    complete_stats = {
+        "cantidad_comentarios": total_comments,
+        "barras_toxicidad": {f"is_{field}": {"true": stats[f"is_{field}"]["count"], "false": total_comments - stats[f"is_{field}"]["count"]} for field in ["toxic", "hatespeech", "abusive", "provocative", "racist", "obscene", "threat", "religious_hate", "nationalist", "sexist", "homophobic", "radicalism"]},
+        "sentimientos": {
+            "mean_sentiment_intensity": mean_sentiment_intensity,
+            "sentiment_types_distribution": sentiment_counts
+        },
+        "porcentaje_tagged": (sum(any(c.get(f"is_{tag}") for tag in ["toxic", "hatespeech", "abusive", "provocative", "racist", "obscene", "threat", "religious_hate", "nationalist", "sexist", "homophobic", "radicalism"]) for c in enriched_comments) / total_comments * 100) if total_comments else 0,
+        "mean_likes": sum(c.get("like_count_comment", 0) for c in enriched_comments) / total_comments if total_comments else 0,
+        "max_likes": max((c.get("like_count_comment", 0) for c in enriched_comments), default=0),
+        "engagement_stats": {
+            "comments_with_urls": sum(1 for c in enriched_comments if c.get("has_url")),
+            "comments_with_tags": sum(1 for c in enriched_comments if c.get("has_tag")),
+            "url_percentage": (sum(1 for c in enriched_comments if c.get("has_url")) / total_comments * 100) if total_comments else 0,
+            "tag_percentage": (sum(1 for c in enriched_comments if c.get("has_tag")) / total_comments * 100) if total_comments else 0,
+        }
+    }
+
     # 7. Guardar comentarios en supabase
     try:
         print(f"🔄 Guardando {len(enriched_comments)} comentarios en BD...")
@@ -145,6 +193,13 @@ def predict_pipeline(youtube_url_or_id, max_comments=100):
     except Exception as e:
         print(f"⚠️ Error guardando en BD (el pipeline continúa): {e}")
 
+    try:
+        from server.database.save_comments import save_video_statistics
+        print(f"📊 Guardando estadísticas del video...")
+        saved_stats = save_video_statistics(video_id, complete_stats)
+        print(f"✅ Estadísticas del video guardadas exitosamente")
+    except Exception as e:
+        print(f"⚠️ Error guardando estadísticas del video (el pipeline continúa): {e}")
 
     # 8. Resultado final
     return {

@@ -88,7 +88,7 @@ def save_comments_batch(comments_list: List[Dict[str, Any]]) -> List[Dict[str, A
             "is_toxic", "is_hatespeech", "is_abusive", "is_provocative",
             "is_racist", "is_obscene", "is_threat", "is_religious_hate",
             "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism",
-            "sentiment_type", "sentiment_intensity"
+            "sentiment_type", "sentiment_intensity",
         }
         
         # Prepara datos para inserción en lote
@@ -199,3 +199,75 @@ def test_save_function():
 
 if __name__ == "__main__":      # solo para testear manualmente
     test_save_function()
+
+
+#  GUARDAR ESTADÍSTICAS DEL VIDEO
+def save_video_statistics(video_id: str, stats_data: Dict[str, Any]) -> Dict[str, Any] | None:
+    """
+    Guarda/actualiza estadísticas (UNA por video_id)
+    Resumen de TODOS los comentarios del video
+    """
+    try:
+        import json
+        print(f"📊 Guardando estadísticas para video: {video_id}")
+
+        stats_record = {
+            "video_id": video_id,
+            "total_comments": stats_data.get("cantidad_comentarios", 0),
+            "porcentaje_tagged": stats_data.get("porcentaje_tagged", 0),
+            "mean_likes": stats_data.get("mean_likes", 0),
+            "max_likes": stats_data.get("max_likes", 0),
+            "mean_sentiment_intensity": stats_data.get("sentimientos", {}).get("mean_sentiment_intensity"),
+            "sentiment_distribution": json.dumps(stats_data.get("sentimientos", {}).get("sentiment_types_distribution", {})),
+            "toxicity_stats": json.dumps(stats_data.get("barras_toxicidad", {})),
+            "engagement_stats": json.dumps(stats_data.get("engagement_stats", {}))
+        }
+        
+        # UPSERT: insertar o actualizar si ya existe
+        response = supabase.table("video_statistics")\
+            .upsert(stats_record, on_conflict="video_id")\
+            .execute()
+        
+        if response.data:
+            print(f"✅ Estadísticas guardadas/actualizadas para video: {video_id}")
+            return response.data[0]
+        else:
+            print(f"⚠️ No se recibieron datos al guardar estadísticas")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error al guardar estadísticas: {e}")
+        return None
+
+def get_video_statistics(video_id: str) -> Dict[str, Any] | None:
+    """
+    Recupera estadísticas de UN video específico
+    """
+    try:
+        import json
+        print(f"📊 Buscando estadísticas para video: {video_id}")
+        response = supabase.table("video_statistics")\
+            .select("*")\
+            .eq("video_id", video_id)\
+            .single()\
+            .execute()
+        
+        if response.data:
+            # Parsear campos JSON de vuelta a dict
+            stats = response.data.copy()
+            if stats.get("sentiment_distribution"):
+                stats["sentiment_distribution"] = json.loads(stats["sentiment_distribution"])
+            if stats.get("toxicity_stats"):
+                stats["toxicity_stats"] = json.loads(stats["toxicity_stats"])
+            if stats.get("engagement_stats"):
+                stats["engagement_stats"] = json.loads(stats["engagement_stats"])
+            
+            print(f"✅ Estadísticas encontradas para video: {video_id}")
+            return stats
+        else:
+            print(f"📭 No hay estadísticas guardadas para video: {video_id}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error al recuperar estadísticas: {e}")
+        return None
