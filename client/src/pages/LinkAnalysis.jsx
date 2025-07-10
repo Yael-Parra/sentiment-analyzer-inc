@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   analyzeYouTubeVideo, 
   getSavedComments, 
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react';
 
 const LinkAnalysis = () => {
+  const navigate = useNavigate();
   const [videoUrl, setVideoUrl] = useState('');
   const [analysisData, setAnalysisData] = useState(null);
   const [savedComments, setSavedComments] = useState([]);
@@ -65,13 +67,14 @@ const LinkAnalysis = () => {
 
   setLoading(true);
   setError('');
-  setAnalysisData(null); // Resetear datos anteriores
+  setAnalysisData({}); // Resetear datos anteriores
 
   try {
     console.log("Iniciando análisis..."); // Debug
     const data = await analyzeYouTubeVideo(videoUrl, maxComments);
     console.log("Datos recibidos:", data); // Debug
-    
+    const videoId = extractVideoIdFromUrl(videoUrl);
+    navigate(`/statistics/${videoId}`);
     if (!data) {
       throw new Error("No se recibieron datos del servidor");
     }

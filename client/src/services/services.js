@@ -19,7 +19,7 @@ export const analyzeYouTubeVideo = async (videoUrl, maxComments = 100) => {
 // Get video statistics
 export async function getVideoStatistics(videoId) {
   try {
-    const res = await fetch(`http://localhost:5000/api/statistics/${videoId}`);
+    const res = await fetch(`http://localhost:5000/statistics/${videoId}`);
     if (!res.ok) throw new Error("Error en la petición de estadísticas");
     return await res.json();
   } catch (err) {
@@ -86,12 +86,6 @@ export const formatToxicityDataForCharts = (toxicityStats = {}) => {
   ];
 };
 
-// Función para formatear datos de sentimiento
-export const formatSentimentDataForCharts = (sentimentDistribution = {}) => {
-  return Object.entries(sentimentDistribution)
-    .filter(([key]) => key !== 'dominant_sentiment')
-    .map(([name, value]) => ({ name, value }));
-};
 
 // Función para calcular métricas de engagement
 export const calculateEngagementMetrics = (comments = []) => {
@@ -177,19 +171,6 @@ export const getTopToxicComments = (comments, limit = 5) => {
         .filter(comment => comment.toxic_probability > 0)
         .sort((a, b) => b.toxic_probability - a.toxic_probability)
         .slice(0, limit);
-};
-
-// Engagement metrics
-export const calculateEngagementMetrics = (comments, engagementStats) => {
-    return {
-        totalLikes: engagementStats?.mean_likes * engagementStats?.total_comments || 0,
-        avgLikes: engagementStats?.mean_likes || 0,
-        maxLikes: engagementStats?.max_likes || 0,
-        commentsWithUrls: engagementStats?.comments_with_urls || 0,
-        commentsWithTags: engagementStats?.comments_with_tags || 0,
-        percentageWithUrls: engagementStats?.url_percentage || 0,
-        percentageWithTags: engagementStats?.tag_percentage || 0
-    };
 };
 
 // Extract video ID
