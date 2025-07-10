@@ -290,8 +290,8 @@ def analyze_sentiment(text):
     if not isinstance(text, str) or not text.strip():
         return pd.Series({
             'sentiment_type': 'neutral',
-            'sentiment_intensity': 0.0,
-            'sentiment_intensity_category': 'weak'
+            'sentiment_score': 0.0,
+            'sentiment_intensity': 'weak'
         })
 
     scores = analyzer_en.polarity_scores(text)
@@ -305,20 +305,20 @@ def analyze_sentiment(text):
     else:
         sentiment_type = 'neutral'
     
-    sentiment_intensity = float(compound)
+    sentiment_score = float(compound)
     # Sentiment intensity, lo tuve que cambiar a float para las estadísticas
     abs_score = abs(compound)
     if abs_score >= 0.6:
-        sentiment_intensity_category = 'strong'
+        sentiment_intensity = 'strong'
     elif abs_score >= 0.3:
-        sentiment_intensity_category = 'moderate'
+        sentiment_intensity = 'moderate'
     else:
-        sentiment_intensity_category = 'weak'
+        sentiment_intensity = 'weak'
     
     return pd.Series({
         'sentiment_type': sentiment_type,
-        'sentiment_intensity': sentiment_intensity,
-        'sentiment_intensity_category': sentiment_intensity_category
+        'sentiment_score': sentiment_score,
+        'sentiment_intensity': sentiment_intensity
     })
 
 # ----------------------------------------------------------------
@@ -341,7 +341,7 @@ def clean_youtube_data(df):
 # Step 8  remove_linebreaks_and_spaces
     df = remove_linebreaks_and_spaces(df)
 # Step 9 analyze_sentiment
-    df[['sentiment_type', 'sentiment_intensity', 'sentiment_intensity_category']] = df['text'].apply(analyze_sentiment)
+    df[['sentiment_type', 'sentiment_score', 'sentiment_intensity']] = df['text'].apply(analyze_sentiment)
 
     return df
 

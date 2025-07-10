@@ -84,7 +84,7 @@ def save_comments_batch(comments_list: List[Dict[str, Any]]) -> List[Dict[str, A
             "is_toxic", "is_hatespeech", "is_abusive", "is_provocative",
             "is_racist", "is_obscene", "is_threat", "is_religious_hate",
             "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism",
-            "sentiment_type", "sentiment_intensity",
+            "sentiment_type", "sentiment_score",
         }
         
         # Prepara datos para inserción en lote
@@ -213,7 +213,7 @@ def save_video_statistics(video_id: str, stats_data: Dict[str, Any]) -> Dict[str
             "porcentaje_tagged": stats_data.get("porcentaje_tagged", 0),
             "mean_likes": stats_data.get("mean_likes", 0),
             "max_likes": stats_data.get("max_likes", 0),
-            "mean_sentiment_intensity": stats_data.get("sentimientos", {}).get("mean_sentiment_intensity"),
+            "mean_sentiment_score": stats_data.get("sentimientos", {}).get("mean_sentiment_score"),
             "sentiment_distribution": json.dumps(stats_data.get("sentimientos", {}).get("sentiment_types_distribution", {})),
             "toxicity_stats": json.dumps(stats_data.get("barras_toxicidad", {})),
             "engagement_stats": json.dumps(stats_data.get("engagement_stats", {}))
