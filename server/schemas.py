@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 class VideoRequest(BaseModel):
@@ -34,9 +34,10 @@ class Comment(BaseModel):
     radicalism_probability: Optional[float]
     is_radicalism: Optional[bool]
 
-    # Campos adicionales temporales
+    # sentimientos
     sentiment_type: Optional[str] = None
     sentiment_intensity: Optional[float] = None
+
     is_self_promotional: Optional[bool] = None
     has_url: Optional[bool] = None
     has_tag: Optional[bool] = None
@@ -47,6 +48,20 @@ class Comment(BaseModel):
     class Config:
         extra = "allow"
 
+class VideoStatistics(BaseModel):
+    video_id: str
+    total_comments: int
+    porcentaje_tagged: float
+    mean_likes: float
+    max_likes: int
+    mean_sentiment_intensity: Optional[float] = None
+    sentiment_distribution: Dict[str, int] = {}
+    toxicity_stats: Dict[str, Dict[str, int]] = {}
+    engagement_stats: Dict[str, Any] = {}
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
 class PredictionStats(BaseModel):
     count: int
     percentage: float
@@ -54,5 +69,10 @@ class PredictionStats(BaseModel):
 class PredictionResponse(BaseModel):
     video_id: str
     total_comments: int
-    stats: Dict[str, PredictionStats]
+    stats: Dict[str, Any]
     comments: List[Comment]
+
+class SavedStatisticsResponse(BaseModel):
+    video_id: str
+    statistics: VideoStatistics
+    total_saved_comments: int
