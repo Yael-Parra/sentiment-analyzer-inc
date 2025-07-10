@@ -5,19 +5,23 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 // Analyze YouTube video
 export const analyzeYouTubeVideo = async (videoUrl, maxComments = 100) => {
     try {
-        const response = await axios.post(`${API_URL}/predict/`, {
+        const response = await axios.post(`${API_URL}/CommentAnalyzer/`, {
             url_or_id: videoUrl,
             max_comments: maxComments
         });
         return response.data;
     } catch (error) {
         console.error('❌ Error analyzing video:', error.message);
-        throw new Error(`Error al analizar el video: ${error.response?.data?.detail || error.message}`);
+        throw new Error(`Error while analyzing video: ${error.response?.data?.detail || error.message}`);
     }
 };
 
 // Get video statistics
 export const getVideoStatistics = async (videoId, maxComments = 100) => {
+    if (!videoId) {
+        throw new Error("Se requiere el ID del video para obtener estadísticas");
+    }
+    
     try {
         const response = await axios.get(`${API_URL}/stats/`, {
             params: {
@@ -27,8 +31,12 @@ export const getVideoStatistics = async (videoId, maxComments = 100) => {
         });
         return response.data;
     } catch (error) {
-        console.error('❌ Error getting stats:', error.message);
-        throw new Error(`Error al obtener estadísticas: ${error.response?.data?.detail || error.message}`);
+        const errorMessage = error.response?.data?.detail || 
+                          (error.response?.status === 422 ? 
+                           "Faltan parámetros requeridos (video_id)" : 
+                           error.message);
+        console.error('❌ Error getting stats:', errorMessage);
+        throw new Error(`Error while obtaining statistics: ${errorMessage}`);
     }
 };
 
@@ -39,7 +47,7 @@ export const getSavedComments = async (videoId) => {
         return response.data;
     } catch (error) {
         console.error('❌ Error getting saved comments:', error.message);
-        throw new Error(`Error al obtener comentarios guardados: ${error.response?.data?.detail || error.message}`);
+        throw new Error(`Error while obtaining saved comments: ${error.response?.data?.detail || error.message}`);
     }
 };
 
@@ -50,7 +58,7 @@ export const deleteSavedComments = async (videoId) => {
         return response.data;
     } catch (error) {
         console.error('❌ Error deleting saved comments:', error.message);
-        throw new Error(`Error al eliminar comentarios: ${error.response?.data?.detail || error.message}`);
+        throw new Error(`Error while eliminating comments: ${error.response?.data?.detail || error.message}`);
     }
 };
 
@@ -61,26 +69,24 @@ export const checkServerHealth = async () => {
         return response.data;
     } catch (error) {
         console.error('❌ Server health check failed:', error.message);
-        throw new Error(`Servidor no disponible: ${error.message}`);
+        throw new Error(`Servidor not avilable: ${error.message}`);
     }
 };
 
 // Toxicity chart data
-export const formatToxicityDataForCharts = (barras_toxicidad) => {
-    if (!barras_toxicidad) return [];
-
-    return Object.entries(barras_toxicidad).map(([type, data]) => {
-        const total = data.true + data.false;
-        return {
-            type: type.replace('is_', '').toUpperCase(),
-            positive: data.true,
-            negative: data.false,
-            total,
-            percentage: total > 0 ? ((data.true / total) * 100).toFixed(1) : 0,
-            color: getToxicityColor(type)
-        };
-    });
+export const formatToxicityDataForCharts = (toxicityDistribution) => {
+    if (!toxicityDistribution) return [];
+    
+    return Object.entries(toxicityDistribution).map(([type, count]) => ({
+        type: type.replace('is_', '').replace('_', ' ').toUpperCase(),
+        toxic: count.true || 0,
+        nonToxic: count.false || 0,
+        total: (count.true || 0) + (count.false || 0),
+        percentage: ((count.true || 0) / ((count.true || 0) + (count.false || 0)) * 100).toFixed(1),
+        color: getToxicityColor(type)
+    }));
 };
+            
 
 const TOXICITY_COLORS = {
     'is_toxic': '#FF6B6B',
@@ -100,24 +106,24 @@ const TOXICITY_COLORS = {
 const getToxicityColor = (type) => TOXICITY_COLORS[type] || '#74B9FF';
 
 // Sentiment chart data
-export const formatSentimentDataForCharts = (sentimientos) => {
-    if (!sentimientos?.sentiment_types_distribution) return [];
-
-    const total = Object.values(sentimientos.sentiment_types_distribution).reduce((a, b) => a + b, 0);
-
-    return Object.entries(sentimientos.sentiment_types_distribution).map(([sentiment, count]) => ({
+export const formatSentimentDataForCharts = (sentimentAnalysis) => {
+    if (!sentimentAnalysis?.sentiment_counts) return [];
+    
+    const total = Object.values(sentimentAnalysis.sentiment_counts).reduce((a, b) => a + b, 0);
+    
+    return Object.entries(sentimentAnalysis.sentiment_counts).map(([sentiment, count]) => ({
         sentiment: sentiment.toUpperCase(),
         count,
         percentage: total > 0 ? ((count / total) * 100).toFixed(1) : 0,
         color: getSentimentColor(sentiment)
     }));
 };
+        
 
 const SENTIMENT_COLORS = {
     'positive': '#00B894',
     'negative': '#E17055',
-    'neutral': '#74B9FF',
-    'compound': '#FDCB6E'
+    'neutral' : '#74B9FF',
 };
 
 const getSentimentColor = (sentiment) => SENTIMENT_COLORS[sentiment.toLowerCase()] || '#DDD';
@@ -154,20 +160,15 @@ export const getTopToxicComments = (comments, limit = 5) => {
 };
 
 // Engagement metrics
-export const calculateEngagementMetrics = (comments, stats) => {
-    if (!comments || !Array.isArray(comments)) return null;
-
-    const totalComments = comments.length;
-    const totalLikes = comments.reduce((sum, comment) => sum + Number(comment.like_count || 0), 0);
-
+export const calculateEngagementMetrics = (comments, engagementStats) => {
     return {
-        totalComments,
-        averageLikes: totalComments > 0 ? (totalLikes / totalComments).toFixed(2) : 0,
-        maxLikes: Math.max(...comments.map(c => c.like_count || 0)),
-        commentsWithUrls: stats?.comments_with_urls || 0,
-        commentsWithTags: stats?.comments_with_tags || 0,
-        urlPercentage: stats?.url_percentage || 0,
-        tagPercentage: stats?.tag_percentage || 0
+        totalLikes: engagementStats?.mean_likes * engagementStats?.total_comments || 0,
+        avgLikes: engagementStats?.mean_likes || 0,
+        maxLikes: engagementStats?.max_likes || 0,
+        commentsWithUrls: engagementStats?.comments_with_urls || 0,
+        commentsWithTags: engagementStats?.comments_with_tags || 0,
+        percentageWithUrls: engagementStats?.url_percentage || 0,
+        percentageWithTags: engagementStats?.tag_percentage || 0
     };
 };
 
@@ -222,7 +223,7 @@ export const getSentimentIntensityDistribution = (comments) => {
     };
 
     comments.forEach(comment => {
-        const intensity = comment.sentiment_intensity || 0;
+        const intensity = comment.sentiment_score || 0;
         if (intensity <= 0.3) bins['0.0 - 0.3'] += 1;
         else if (intensity <= 0.6) bins['0.3 - 0.6'] += 1;
         else bins['0.6 - 1.0'] += 1;
@@ -245,7 +246,7 @@ export const getToxicityEngagementScatterData = (comments) => {
 };
 
 export const getStrategicInsights = (stats) => ({
-    sarcasmWarning: stats.sarcasm_ratio > 0.2 ? "⚠️ Alto sarcasmo" : "✅",
+    sarcasmWarning: stats.sarcasm_ratio > 0.2 ? "⚠️ High sarcasm" : "✅",
     bestTimeToPost: stats.optimal_posting_time,
     topTrolls: stats.top_toxic_authors
 });
