@@ -50,7 +50,7 @@ def get_stats(video_id: str):
                 "cantidad_comentarios": saved_stats["total_comments"],
                 "barras_toxicidad": saved_stats["toxicity_stats"],
                 "sentimientos": {
-                    "mean_sentiment_intensity": saved_stats["mean_sentiment_intensity"],
+                    "mean_sentiment_score": saved_stats["mean_sentiment_score"],
                     "sentiment_types_distribution": saved_stats["sentiment_distribution"]
                 },
                 "porcentaje_tagged": saved_stats["porcentaje_tagged"],
