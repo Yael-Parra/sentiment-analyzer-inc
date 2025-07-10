@@ -9,7 +9,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/link-analysis" element={<LinkAnalysis />} />
-      <Route path="/statistics" element={<Statistics />} />
+      <Route path="/statistics/:videoId" element={<Statistics />} />
       <Route path="*" element={<div>Not Found</div>} />
     </Routes>
   );

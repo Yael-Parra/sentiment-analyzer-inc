@@ -17,28 +17,30 @@ export const analyzeYouTubeVideo = async (videoUrl, maxComments = 100) => {
 };
 
 // Get video statistics
-export const getVideoStatistics = async (videoId, maxComments = 100) => {
-    if (!videoId) {
-        throw new Error("Se requiere el ID del video para obtener estadísticas");
-    }
-    
-    try {
-        const response = await axios.get(`${API_URL}/stats/`, {
-            params: {
-                video_id: videoId,
-                max_comments: maxComments
-            }
-        });
-        return response.data;
-    } catch (error) {
-        const errorMessage = error.response?.data?.detail || 
-                          (error.response?.status === 422 ? 
-                           "Faltan parámetros requeridos (video_id)" : 
-                           error.message);
-        console.error('❌ Error getting stats:', errorMessage);
-        throw new Error(`Error while obtaining statistics: ${errorMessage}`);
-    }
+export async function getVideoStatistics(videoId) {
+  try {
+    const res = await fetch(`http://localhost:5000/api/statistics/${videoId}`);
+    if (!res.ok) throw new Error("Error en la petición de estadísticas");
+    return await res.json();
+  } catch (err) {
+    console.error("getVideoStatistics error:", err);
+    return null;
+  }
 };
+
+// Función para obtener comentarios del video
+export const getCommentsByVideo = async (videoId) => {
+  try {
+    const response = await fetch(`/api/videos/${videoId}/comments`);
+    if (!response.ok) throw new Error('Error al obtener comentarios');
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error en getCommentsByVideo:', error);
+    throw error;
+  }
+};
+
 
 // Get saved comments
 export const getSavedComments = async (videoId) => {
@@ -74,17 +76,35 @@ export const checkServerHealth = async () => {
 };
 
 // Toxicity chart data
-export const formatToxicityDataForCharts = (toxicityDistribution) => {
-    if (!toxicityDistribution) return [];
-    
-    return Object.entries(toxicityDistribution).map(([type, count]) => ({
-        type: type.replace('is_', '').replace('_', ' ').toUpperCase(),
-        toxic: count.true || 0,
-        nonToxic: count.false || 0,
-        total: (count.true || 0) + (count.false || 0),
-        percentage: ((count.true || 0) / ((count.true || 0) + (count.false || 0)) * 100).toFixed(1),
-        color: getToxicityColor(type)
-    }));
+export const formatToxicityDataForCharts = (toxicityStats = {}) => {
+  return [
+    {
+      name: 'Toxicidad',
+      toxic: toxicityStats.toxic_count || 0,
+      nonToxic: toxicityStats.non_toxic_count || 0
+    }
+  ];
+};
+
+// Función para formatear datos de sentimiento
+export const formatSentimentDataForCharts = (sentimentDistribution = {}) => {
+  return Object.entries(sentimentDistribution)
+    .filter(([key]) => key !== 'dominant_sentiment')
+    .map(([name, value]) => ({ name, value }));
+};
+
+// Función para calcular métricas de engagement
+export const calculateEngagementMetrics = (comments = []) => {
+  if (!comments.length) return {};
+  
+  const totalLikes = comments.reduce((sum, c) => sum + (c.like_count || 0), 0);
+  const maxLikes = Math.max(...comments.map(c => c.like_count || 0));
+  
+  return {
+    mean_likes: totalLikes / comments.length,
+    max_likes: maxLikes,
+    total_likes: totalLikes
+  };
 };
             
 

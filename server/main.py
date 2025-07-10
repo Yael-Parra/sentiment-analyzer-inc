@@ -33,9 +33,15 @@ def predict_from_youtube(request: VideoRequest):
     return result
 
 
+# ---------------------------------------------------------------------------------------------------------   
 # Endpoint GET para los gráficos, se traen por video_id:
+from fastapi import Query
+
 @app.get("/stats/")
-def get_stats(video_id: str):
+def get_stats(
+    video_id: str = Query(..., description="ID del video de YouTube"),
+    max_comments: int = Query(None, description="Número máximo de comentarios a devolver (opcional)")
+):
     """
     Recupera estadísticas guardadas para gráficos del frontend
     NO ejecuta pipeline - solo consulta base de datos
@@ -44,33 +50,46 @@ def get_stats(video_id: str):
         print(f"🔍 Recuperando estadísticas guardadas para: {video_id}")
         saved_stats = get_video_statistics(video_id)
         
-        if saved_stats:
-            return {
-                "video_id": video_id,
-                "cantidad_comentarios": saved_stats["total_comments"],
-                "barras_toxicidad": saved_stats["toxicity_stats"],
-                "sentimientos": {
-                    "mean_sentiment_score": saved_stats["mean_sentiment_score"],
-                    "sentiment_types_distribution": saved_stats["sentiment_distribution"]
-                },
-                "porcentaje_tagged": saved_stats["porcentaje_tagged"],
-                "mean_likes": saved_stats["mean_likes"],
-                "max_likes": saved_stats["max_likes"],
-                "engagement_stats": saved_stats["engagement_stats"],
-                "source": "database"
-            }
-        else:
+        if not saved_stats:
             raise HTTPException(
                 status_code=404, 
                 detail=f"Video {video_id} no ha sido analizado. Usa /CommentAnalyzer/ primero."
             )
         
+        # Filtrar comentarios si se especifica max_comments
+        if max_comments is not None:
+            # Aquí asumo que saved_stats contiene los comentarios completos
+            # Si no es así, quita esta parte
+            saved_stats["comments"] = saved_stats["comments"][:max_comments]
+            saved_stats["total_comments"] = len(saved_stats["comments"])
+        
+        return {
+            "video_id": video_id,
+            "total_comments": saved_stats["total_comments"],
+            "toxicity_distribution": saved_stats["toxicity_stats"],
+            "sentiment_analysis": {
+                "mean_score": saved_stats["mean_sentiment_score"],
+                "sentiment_counts": saved_stats["sentiment_distribution"],
+                "dominant_sentiment": max(
+                    saved_stats["sentiment_distribution"].items(),
+                    key=lambda x: x[1]
+                )[0]
+            },
+            "engagement_stats": {
+                "comments_with_urls": saved_stats["engagement_stats"].get("url_count", 0),
+                "comments_with_tags": saved_stats["engagement_stats"].get("tag_count", 0),
+                "url_percentage": saved_stats["porcentaje_tagged"],
+                "mean_likes": saved_stats["mean_likes"],
+                "max_likes": saved_stats["max_likes"]
+            },
+            "source": "database"
+        }
+        
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error recuperando estadísticas: {str(e)}")
-
-
+# ---------------------------------------------------------------------------------------------------------   
 @app.get("/saved-comments/{video_id}")
 def get_saved_comments(video_id: str):
     """Recupera comentarios guardados de un video específico"""
