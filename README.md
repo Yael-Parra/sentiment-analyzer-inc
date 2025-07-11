@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="img/logo.png" alt="YouTube Comments Sentiment Analyzer Logo" width="200"/>
+  <img src="img/logo.png" alt="YouTube Comments Sentiment and Toxicity Analyzer Logo" width="200"/>
 </p>
 
-<h1 align="center">YouTube Comments Sentiment Analyzer</h1>
+<h1 align="center">YouTube Comments Sentiment and Toxicity Analyzer</h1>
 
 <p align="center">
   Emotional Intelligence for Creators • Dockerized & Azure Deployed • FastAPI + React + Supabase
