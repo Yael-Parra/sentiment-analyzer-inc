@@ -32,11 +32,10 @@ const EngagementComparison = ({ allComments }) => {
       const category = isToxic ? 'toxic' : 'clean';
       
       if (!acc[category]) {
-        acc[category] = { totalLikes: 0, totalReplies: 0, count: 0 };
+        acc[category] = { totalLikes: 0, count: 0 };
       }
       
       acc[category].totalLikes += (comment.total_likes_comment || 0);
-      acc[category].totalReplies += (comment.reply_count || 0);
       acc[category].count += 1;
       
       return acc;
@@ -46,7 +45,6 @@ const EngagementComparison = ({ allComments }) => {
     return Object.entries(engagementAnalysis).map(([category, data]) => ({
       category: category === 'toxic' ? 'Toxic Comments' : 'Clean Comments',
       avgLikes: data.count > 0 ? parseFloat((data.totalLikes / data.count).toFixed(1)) : 0,
-      avgReplies: data.count > 0 ? parseFloat((data.totalReplies / data.count).toFixed(1)) : 0,
       totalComments: data.count
     }));
   }, [allComments]);
@@ -66,7 +64,6 @@ const EngagementComparison = ({ allComments }) => {
             <Tooltip />
             <Legend />
             <Bar yAxisId="left" dataKey="avgLikes" fill={COLORS.success} name="Average Likes" />
-            <Bar yAxisId="left" dataKey="avgReplies" fill={COLORS.blue} name="Average Replies" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
