@@ -15,6 +15,34 @@ import {
   MessageCircle, AlertTriangle, Heart, Shield, Activity
 } from 'lucide-react';
 
+const StatisticsSelector = () => {
+  const [videoId, setVideoId] = useState('');
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (videoId.trim()) {
+      navigate(`/statistics/${videoId.trim()}`);
+    }
+  };
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col items-center mt-10">
+      <label className="mb-2">Introduce el ID del video:</label>
+      <input
+        className="border px-2 py-1 mb-2"
+        value={videoId}
+        onChange={e => setVideoId(e.target.value)}
+        placeholder="ID del video"
+      />
+      <button
+        type="submit"
+        className="bg-blue-500 text-white px-4 py-2 rounded"
+      >
+        Ver estadísticas
+      </button>
+    </form>
+  );
+};
 const Statistics = () => {
   const { videoId } = useParams();
   const [stats, setStats] = useState(null);
