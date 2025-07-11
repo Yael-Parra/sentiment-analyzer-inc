@@ -9,7 +9,7 @@ export const analyzeYouTubeVideo = async (videoUrl, maxComments = 100) => {
             url_or_id: videoUrl,
             max_comments: maxComments
         });
-        return response.data;
+        return response.data
     } catch (error) {
         console.error('❌ Error analyzing video:', error.message);
         throw new Error(`Error while analyzing video: ${error.response?.data?.detail || error.message}`);
@@ -79,8 +79,6 @@ export const getVideoStatisticsById = async (videoId) => {
         throw new Error(`Error while obtaining video statistics: ${errorMessage}`);
     }
 };
-
-
 
 // Saved Comments Services //
 

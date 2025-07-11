@@ -1,182 +1,995 @@
-{
-  "classes": {
-    "class_names": [
-      "toxic",
-      "hatespeech",
-      "abusive",
-      "threat",
-      "provocative",
-      "obscene",
-      "racist",
-      "nationalist",
-      "sexist",
-      "homophobic",
-      "religious_hate",
-      "radicalism"
-    ],
-    "target_classes": [
-      "is_toxic",
-      "is_hatespeech",
-      "is_abusive",
-      "is_threat",
-      "is_provocative",
-      "is_obscene",
-      "is_racist",
-      "is_nationalist",
-      "is_sexist",
-      "is_homophobic",
-      "is_religious_hate",
-      "is_radicalism"
-    ],
-    "num_classes": 12
-  },
-  "model_config": {
-    "vocab_size": 1283,
-    "embedding_dim": 256,
-    "hidden_dim": 192,
-    "num_classes": 12,
-    "num_numeric_features": 107,
-    "num_layers": 2,
-    "max_sequence_length": 50,
-    "dropout_rate": 0.4
-  },
-  "test_metrics": {
-    "f1_macro": 0.9581995556974471,
-    "f1_micro": 0.959604641168887,
-    "f1_weighted": 0.962574205458089,
-    "hamming_loss": 0.01284153014421463,
-    "jaccard_score": 0.7299180030822754,
-    "class_metrics": {
-      "toxic": {
-        "precision": 1.0,
-        "recall": 0.9980806142034548,
-        "f1": 0.9990393852065321,
-        "support": 521.0
-      },
-      "hatespeech": {
-        "precision": 0.8868778280542986,
-        "recall": 1.0,
-        "f1": 0.9400479616306954,
-        "support": 392.0
-      },
-      "abusive": {
-        "precision": 0.8733624454148472,
-        "recall": 0.966183574879227,
-        "f1": 0.9174311926605504,
-        "support": 207.0
-      },
-      "threat": {
-        "precision": 1.0,
-        "recall": 0.9928571428571429,
-        "f1": 0.996415770609319,
-        "support": 140.0
-      },
-      "provocative": {
-        "precision": 0.7225806451612903,
-        "recall": 0.9911504424778761,
-        "f1": 0.8358208955223881,
-        "support": 113.0
-      },
-      "obscene": {
-        "precision": 0.7159090909090909,
-        "recall": 1.0,
-        "f1": 0.8344370860927153,
-        "support": 126.0
-      },
-      "racist": {
-        "precision": 1.0,
-        "recall": 0.9919354838709677,
-        "f1": 0.9959514170040485,
-        "support": 124.0
-      },
-      "nationalist": {
-        "precision": 0.975609756097561,
-        "recall": 1.0,
-        "f1": 0.9876543209876543,
-        "support": 120.0
-      },
-      "sexist": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 124.0
-      },
-      "homophobic": {
-        "precision": 0.9833333333333333,
-        "recall": 1.0,
-        "f1": 0.9915966386554621,
-        "support": 118.0
-      },
-      "religious_hate": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 130.0
-      },
-      "radicalism": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1": 1.0,
-        "support": 129.0
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  getSentimentAnalyzerAll,
+  getSentimentAnalyzerByVideo,
+  getVideoStatisticsAll,
+  getVideoStatisticsById
+} from '../services/services';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, ScatterChart, Scatter, RadarChart, 
+  PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, LineChart, Line,
+  ComposedChart, Area, AreaChart
+} from 'recharts';
+import { 
+  Shield, 
+  AlertTriangle, 
+  MessageSquare, 
+  Activity,
+  Target,
+  TrendingUp,
+  Users,
+  Eye,
+  BarChart3
+} from 'lucide-react';
+
+const Statistics = () => {
+  // Extraer correctamente el videoId de la URL
+  const urlPath = window.location.pathname;
+  const pathParts = urlPath.split('/').filter(part => part !== '');
+  // Si la URL es /statistics/abc123, pathParts será ['statistics', 'abc123']
+  const videoIdFromUrl = pathParts.length > 1 && pathParts[0] === 'statistics' && pathParts[1] !== '' ? pathParts[1] : null;
+  
+  // Estados principales
+  const [allComments, setAllComments] = useState([]);
+  const [allVideoStats, setAllVideoStats] = useState([]);
+  const [specificVideoComments, setSpecificVideoComments] = useState([]);
+  const [specificVideoStats, setSpecificVideoStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeView, setActiveView] = useState(videoIdFromUrl ? 'specific' : 'global');
+  const [selectedVideoId, setSelectedVideoId] = useState(videoIdFromUrl || '');
+
+  // Colores para gráficos
+  const COLORS = {
+    primary: '#ef4444',
+    secondary: '#64748b',
+    accent: '#dc2626',
+    positive: '#10b981',
+    negative: '#ef4444',
+    neutral: '#6b7280',
+    toxic: '#dc2626',
+    nonToxic: '#059669',
+    warning: '#f59e0b',
+    success: '#10b981',
+    purple: '#8b5cf6',
+    blue: '#3b82f6',
+    indigo: '#6366f1'
+  };
+
+  const TOXICITY_TYPES = [
+    'toxic', 'hatespeech', 'abusive', 'threat', 
+    'provocative', 'obscene', 'racist', 'nationalist',
+    'sexist', 'homophobic', 'religious_hate', 'radicalism'
+  ];
+
+  const TOXICITY_LABELS = {
+    toxic: 'General Toxic',
+    hatespeech: 'Hate Speech',
+    abusive: 'Abusive',
+    threat: 'Threat',
+    provocative: 'Provocative',
+    obscene: 'Obscene',
+    racist: 'Racist',
+    nationalist: 'Nationalist',
+    sexist: 'Sexist',
+    homophobic: 'Homophobic',
+    religious_hate: 'Religious Hate',
+    radicalism: 'Radicalism'
+  };
+
+  const TOXICITY_COLORS = [
+    '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d',
+    '#f59e0b', '#d97706', '#b45309', '#92400e',
+    '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6'
+  ];
+
+  // Cargar datos
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        if (activeView === 'global') {
+          console.log('🔄 Cargando datos globales...');
+          const [commentsResponse, statsResponse] = await Promise.all([
+            getSentimentAnalyzerAll(),
+            getVideoStatisticsAll()
+          ]);
+          
+          setAllComments(commentsResponse.comments || []);
+          setAllVideoStats(statsResponse.video_statistics || []);
+          console.log('✅ Datos globales cargados');
+          
+        } else if (selectedVideoId) {
+          console.log('🔄 Cargando datos para video:', selectedVideoId);
+          const [commentsResponse, statsResponse] = await Promise.all([
+            getSentimentAnalyzerByVideo(selectedVideoId),
+            getVideoStatisticsById(selectedVideoId)
+          ]);
+          
+          setSpecificVideoComments(commentsResponse.comments || []);
+          setSpecificVideoStats(statsResponse.statistics || null);
+          console.log('✅ Datos del video cargados');
+        }
+      } catch (err) {
+        console.error('❌ Error cargando datos:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    },
-    "category_metrics": {
-      "identity": 0.9950404753294328,
-      "behavior": 0.9374169646980643,
-      "content": 0.8872425238617053,
-      "general": 0.9990393852065321
-    },
-    "global_precision": 0.9265560165975104,
-    "global_recall": 0.9950980392156863,
-    "loss": 0.035504924007303394
-  },
-  "training_results": {
-    "best_f1_macro": 0.9634195871331265,
-    "best_loss": 0.03405574133779364,
-    "epochs_trained": 59,
-    "final_train_loss": 0.03636358294987299,
-    "final_val_loss": 0.03299989931782385
-  },
-  "dataset_info": {
-    "total_samples": 6096,
-    "vocab_size": 1283,
-    "num_features": 107,
-    "sequence_length": 50
-  },
-  "thresholds": {
-    "toxic": 0.5,
-    "hatespeech": 0.4,
-    "abusive": 0.4,
-    "threat": 0.2,
-    "provocative": 0.6,
-    "obscene": 0.5,
-    "racist": 0.3,
-    "nationalist": 0.4,
-    "sexist": 0.3,
-    "homophobic": 0.3,
-    "religious_hate": 0.3,
-    "radicalism": 0.2
-  },
-  "class_weights": [
-    1.1706146001815796,
-    1.631132960319519,
-    3.0223140716552734,
-    4.96875,
-    4.6884613037109375,
-    5.107542037963867,
-    4.799212455749512,
-    4.700514316558838,
-    4.902144908905029,
-    4.955284595489502,
-    4.982288837432861,
-    4.955284595489502
-  ],
-  "metadata": {
-    "export_timestamp": "20250710_005944",
-    "pytorch_version": "2.2.2",
-    "total_parameters": 2752159,
-    "architecture": "BiLSTM_Hybrid_MultiHead_Attention_Categorical",
-    "problem_type": "multi_label_classification",
-    "language": "English"
-  }
-}
+    };
+
+    loadData();
+  }, [activeView, selectedVideoId]);
+
+  // Función helper para calcular toxicidad general
+  const isToxicGeneral = (comment) => {
+    return TOXICITY_TYPES.some(type => comment[`is_${type}`]);
+  };
+
+  // Cálculos para estadísticas globales
+  const globalAnalytics = useMemo(() => {
+    if (activeView !== 'global' || !allComments.length) return null;
+    
+    const totalComments = allComments.length;
+    const totalVideos = allVideoStats.length;
+    
+    // Toxicidad general
+    const toxicGeneralCount = allComments.filter(isToxicGeneral).length;
+    const toxicGeneralRate = (toxicGeneralCount / totalComments * 100).toFixed(1);
+    
+    // Análisis detallado de toxicidad (los 12 tipos)
+    const toxicityBreakdown = {};
+    TOXICITY_TYPES.forEach(type => {
+      const count = allComments.filter(c => c[`is_${type}`] === true).length;
+      toxicityBreakdown[type] = {
+        count,
+        percentage: (count / totalComments * 100).toFixed(1)
+      };
+    });
+    
+    // Tipo más frecuente
+    const mostFrequentType = Object.entries(toxicityBreakdown)
+      .sort(([,a], [,b]) => b.count - a.count)[0];
+    
+    // Videos por riesgo
+    const videoRiskAnalysis = allVideoStats.map(videoItem => {
+      const videoComments = allComments.filter(c => c.video_id === videoItem.video_id);
+      const toxicCount = videoComments.filter(isToxicGeneral).length;
+      const toxicRate = videoComments.length > 0 ? 
+        (toxicCount / videoComments.length * 100) : 0;
+      
+      return {
+        video_id: videoItem.video_id,
+        total_comments: videoComments.length,
+        toxic_count: toxicCount,
+        toxic_rate: parseFloat(toxicRate.toFixed(1))
+      };
+    });
+    
+    const highRiskVideos = videoRiskAnalysis.filter(v => v.toxic_rate > 15).length;
+    
+    // Correlación engagement vs toxicidad
+    const engagementAnalysis = allComments.reduce((acc, comment) => {
+      const isToxic = isToxicGeneral(comment);
+      const category = isToxic ? 'toxic' : 'clean';
+      
+      if (!acc[category]) {
+        acc[category] = { totalLikes: 0, totalReplies: 0, count: 0 };
+      }
+      
+      acc[category].totalLikes += (comment.total_likes_comment || 0);
+      acc[category].totalReplies += (comment.reply_count || 0);
+      acc[category].count += 1;
+      
+      return acc;
+    }, {});
+
+    return {
+      totalComments,
+      totalVideos,
+      toxicGeneralCount,
+      toxicGeneralRate,
+      toxicityBreakdown,
+      mostFrequentType,
+      highRiskVideos,
+      engagementAnalysis,
+      videoRiskAnalysis: videoRiskAnalysis.sort((a, b) => b.toxic_rate - a.toxic_rate)
+    };
+  }, [allComments, allVideoStats, activeView]);
+
+  // Cálculos para video específico
+  const specificAnalytics = useMemo(() => {
+    if (activeView !== 'specific' || !specificVideoComments.length) return null;
+    
+    const comments = specificVideoComments;
+    const totalComments = comments.length;
+    
+    // Toxicidad general
+    const toxicGeneralCount = comments.filter(isToxicGeneral).length;
+    
+    // Breakdown detallado de toxicidad
+    const toxicityBreakdown = {};
+    TOXICITY_TYPES.forEach(type => {
+      const count = comments.filter(c => c[`is_${type}`]).length;
+      const avgProbability = comments.length > 0 ? 
+        (comments.reduce((acc, c) => acc + (c[`${type}_probability`] || 0), 0) / comments.length) : 0;
+      
+      toxicityBreakdown[type] = {
+        count,
+        percentage: (count / totalComments * 100).toFixed(1),
+        avgProbability: (avgProbability * 100).toFixed(1)
+      };
+    });
+    
+    // Distribución de sentimientos
+    const sentimentDistribution = comments.reduce((acc, c) => {
+      const sentiment = c.sentiment_type || 'neutral';
+      acc[sentiment] = (acc[sentiment] || 0) + 1;
+      return acc;
+    }, {});
+    
+    // Co-ocurrencia de tipos de toxicidad
+    const coOccurrence = {};
+    TOXICITY_TYPES.forEach(type1 => {
+      TOXICITY_TYPES.forEach(type2 => {
+        if (type1 !== type2) {
+          const key = `${type1}-${type2}`;
+          const count = comments.filter(c => c[`is_${type1}`] && c[`is_${type2}`]).length;
+          if (count > 0) {
+            coOccurrence[key] = count;
+          }
+        }
+      });
+    });
+    
+    // Análisis de correlación sentiment vs toxicity
+    const correlationData = comments.map(c => ({
+      sentiment_score: c.sentiment_score || 0,
+      toxicity_score: Math.max(...TOXICITY_TYPES.map(type => c[`${type}_probability`] || 0)),
+      likes: c.total_likes_comment || 0,
+      is_toxic: isToxicGeneral(c),
+      sentiment_type: c.sentiment_type || 'neutral'
+    }));
+    
+    // Detector de sarcasmo
+    const potentialSarcasm = comments.filter(c => 
+      c.sentiment_type === 'positive' && isToxicGeneral(c)
+    ).length;
+    
+    // Análisis temporal si hay fechas
+    const temporalAnalysis = {};
+    comments.forEach(c => {
+      if (c.created_at) {
+        const date = new Date(c.created_at).toISOString().split('T')[0];
+        if (!temporalAnalysis[date]) {
+          temporalAnalysis[date] = { total: 0, toxic: 0 };
+        }
+        temporalAnalysis[date].total++;
+        if (isToxicGeneral(c)) {
+          temporalAnalysis[date].toxic++;
+        }
+      }
+    });
+
+    return {
+      totalComments,
+      toxicGeneralCount,
+      toxicityBreakdown,
+      sentimentDistribution,
+      coOccurrence,
+      correlationData,
+      potentialSarcasm,
+      temporalAnalysis
+    };
+  }, [specificVideoComments, activeView]);
+
+  // Datos para gráficos globales
+  const globalChartData = useMemo(() => {
+    if (!globalAnalytics) return {};
+    
+    // Barra completa de 12 tipos de toxicidad - SIEMPRE mostrar las 12
+    const toxicityChart = TOXICITY_TYPES.map((type, index) => ({
+      type: TOXICITY_LABELS[type],
+      count: globalAnalytics.toxicityBreakdown[type]?.count || 0,
+      percentage: parseFloat(globalAnalytics.toxicityBreakdown[type]?.percentage || 0),
+      fill: TOXICITY_COLORS[index]
+    }));
+    
+    // Heatmap de videos (top 10 más problemáticos)
+    const heatmapData = globalAnalytics.videoRiskAnalysis.slice(0, 10);
+    
+    // Engagement vs toxicidad
+    const engagementChart = Object.entries(globalAnalytics.engagementAnalysis).map(([category, data]) => ({
+      category: category === 'toxic' ? 'Toxic Comments' : 'Clean Comments',
+      avgLikes: data.count > 0 ? (data.totalLikes / data.count).toFixed(1) : 0,
+      avgReplies: data.count > 0 ? (data.totalReplies / data.count).toFixed(1) : 0,
+      totalComments: data.count
+    }));
+
+    return { toxicityChart, heatmapData, engagementChart };
+  }, [globalAnalytics]);
+
+  // Datos para gráficos específicos
+  const specificChartData = useMemo(() => {
+    if (!specificAnalytics) return {};
+    
+    // Radar chart de toxicidad
+    const radarData = TOXICITY_TYPES.map(type => ({
+      type: TOXICITY_LABELS[type],
+      value: parseFloat(specificAnalytics.toxicityBreakdown[type].percentage),
+      fullMark: 100
+    }));
+    
+    // Pie chart de sentimientos
+    const sentimentChart = Object.entries(specificAnalytics.sentimentDistribution).map(([sentiment, count]) => ({
+      sentiment: sentiment.charAt(0).toUpperCase() + sentiment.slice(1),
+      count,
+      percentage: ((count / specificAnalytics.totalComments) * 100).toFixed(1)
+    }));
+    
+    // Scatter plot correlación
+    const scatterData = specificAnalytics.correlationData.map((item, index) => ({
+      x: item.sentiment_score,
+      y: item.toxicity_score,
+      size: Math.max(item.likes, 1),
+      isToxic: item.is_toxic,
+      sentiment: item.sentiment_type,
+      id: index
+    }));
+    
+    // Sarcasmo detection
+    const sarcasmData = [
+      { name: 'Normal Comments', value: specificAnalytics.totalComments - specificAnalytics.potentialSarcasm },
+      { name: 'Potential Sarcasm', value: specificAnalytics.potentialSarcasm }
+    ];
+    
+    // Timeline temporal
+    const timelineData = Object.entries(specificAnalytics.temporalAnalysis)
+      .map(([date, data]) => ({
+        date,
+        total: data.total,
+        toxic: data.toxic,
+        toxicRate: data.total > 0 ? (data.toxic / data.total * 100).toFixed(1) : 0
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return { radarData, sentimentChart, scatterData, sarcasmData, timelineData };
+  }, [specificAnalytics]);
+
+  const handleVideoSelect = (videoId) => {
+    setSelectedVideoId(videoId);
+    setActiveView('specific');
+    window.history.pushState({}, '', `/statistics/${videoId}`);
+  };
+
+  if (loading) return (
+    <div className="min-h-screen pt-24 bg-slate-50">
+      <div className="container px-4 mx-auto">
+        <div className="flex items-center justify-center py-20">
+          <div className="text-lg text-slate-600">Loading statistics...</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen pt-24 bg-slate-50">
+      <div className="container px-4 mx-auto">
+        <div className="flex items-center justify-center py-20">
+          <div className="px-4 py-3 text-red-700 bg-red-100 border border-red-400 rounded-lg">
+            Error: {error}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen pt-24 bg-slate-50">
+      <div className="container px-4 mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="mb-4 text-3xl font-bold text-slate-800">
+            Toxicity Analysis Dashboard
+          </h1>
+          
+          {/* Vista Toggle */}
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => {
+                setActiveView('global');
+                setSelectedVideoId('');
+                window.history.pushState({}, '', '/statistics');
+              }}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                activeView === 'global'
+                  ? 'bg-red-500 text-white shadow-lg'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              <BarChart3 className="inline w-5 h-5 mr-2" />
+              Global Analysis
+            </button>
+            <button
+              onClick={() => setActiveView('specific')}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                activeView === 'specific'
+                  ? 'bg-red-500 text-white shadow-lg'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              <Target className="inline w-5 h-5 mr-2" />
+              Video Analysis
+            </button>
+          </div>
+
+          {/* Selector de video */}
+          {activeView === 'specific' && (
+            <div className="mb-6">
+              <select
+                value={selectedVideoId}
+                onChange={(e) => handleVideoSelect(e.target.value)}
+                className="px-4 py-3 bg-white border rounded-lg border-slate-300 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 min-w-80"
+              >
+                <option value="">Select video to analyze...</option>
+                {allVideoStats.map(videoItem => (
+                  <option key={videoItem.video_id} value={videoItem.video_id}>
+                    Video {videoItem.video_id} ({videoItem.total_comments || 0} comments)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Vista Global */}
+        {activeView === 'global' && globalAnalytics && (
+          <>
+            {/* Cards de métricas clave */}
+            <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-4">
+              <div className="p-6 bg-white border-l-4 border-blue-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Total Comments</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {globalAnalytics.totalComments.toLocaleString()}
+                    </p>
+                  </div>
+                  <MessageSquare className="w-8 h-8 text-blue-500" />
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border-l-4 border-red-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Toxicity Rate</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {globalAnalytics.toxicGeneralRate}%
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {globalAnalytics.toxicGeneralCount.toLocaleString()} comments
+                    </p>
+                  </div>
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border-l-4 border-purple-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Most Common Type</h3>
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {TOXICITY_LABELS[globalAnalytics.mostFrequentType?.[0]] || 'N/A'}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {globalAnalytics.mostFrequentType?.[1]?.percentage || 0}% of total
+                    </p>
+                  </div>
+                  <Shield className="w-8 h-8 text-purple-500" />
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border-l-4 border-orange-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Risk Videos</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {globalAnalytics.highRiskVideos}
+                    </p>
+                    <p className="text-sm text-slate-500">Toxicity &gt; 15%</p>
+                  </div>
+                  <Eye className="w-8 h-8 text-orange-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Gráficos principales */}
+            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+              {/* Barra completa de 12 tipos (PROTAGONISTA) */}
+              <div className="p-6 bg-white shadow-lg rounded-xl xl:col-span-2">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Complete Distribution of Toxicity Types
+                </h2>
+                <div className="h-96">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={globalChartData.toxicityChart} layout="horizontal">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis 
+                        type="category" 
+                        dataKey="type" 
+                        width={150}
+                        fontSize={12}
+                      />
+                      <Tooltip 
+                        formatter={(value, name, props) => {
+                          if (name === 'percentage') {
+                            return [`${value}%`, 'Percentage'];
+                          }
+                          return [value, name];
+                        }}
+                        labelFormatter={(label, payload) => {
+                          if (payload && payload[0]) {
+                            const data = payload[0].payload;
+                            return `${label} - ${data.count} comments`;
+                          }
+                          return label;
+                        }}
+                        contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
+                      />
+                      <Bar 
+                        dataKey="percentage" 
+                        radius={[0, 4, 4, 0]}
+                      >
+                        {globalChartData.toxicityChart?.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Heatmap de videos */}
+              <div className="p-6 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Most Problematic Videos
+                </h2>
+                <div className="overflow-y-auto h-80">
+                  <div className="space-y-3">
+                    {globalChartData.heatmapData.slice(0, 10).map((videoItem, index) => (
+                      <div 
+                        key={videoItem.video_id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50"
+                      >
+                        <div className="flex-1">
+                          <div className="font-mono text-sm text-slate-600">
+                            Video {videoItem.video_id}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {videoItem.total_comments} comments • {videoItem.toxic_count} toxic
+                          </div>
+                          <div className="w-full h-2 mt-2 bg-gray-200 rounded-full">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                videoItem.toxic_rate > 20 ? 'bg-red-500' :
+                                videoItem.toxic_rate > 10 ? 'bg-yellow-500' :
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(videoItem.toxic_rate, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 ml-4">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            videoItem.toxic_rate > 20 ? 'bg-red-100 text-red-800' :
+                            videoItem.toxic_rate > 10 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {videoItem.toxic_rate}%
+                          </span>
+                          <button
+                            onClick={() => handleVideoSelect(videoItem.video_id)}
+                            className="px-3 py-1 text-sm text-red-500 rounded hover:text-red-700 hover:bg-red-50"
+                          >
+                            Analyze
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Engagement vs toxicidad */}
+              <div className="p-6 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Engagement vs Toxicity
+                </h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={globalChartData.engagementChart}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="category" />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <Tooltip />
+                      <Legend />
+                      <Bar yAxisId="left" dataKey="avgLikes" fill={COLORS.success} name="Average Likes" />
+                      <Bar yAxisId="left" dataKey="avgReplies" fill={COLORS.blue} name="Average Replies" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Vista específica */}
+        {activeView === 'specific' && selectedVideoId && specificAnalytics && (
+          <>
+            {/* Cards específicos del video */}
+            <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-4">
+              <div className="p-6 bg-white border-l-4 border-blue-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Total Comments</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {specificAnalytics.totalComments}
+                    </p>
+                  </div>
+                  <MessageSquare className="w-8 h-8 text-blue-500" />
+                </div>
+              </div>
+              
+              <div className="p-6 bg-white border-l-4 border-red-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Toxic Comments</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {specificAnalytics.toxicGeneralCount}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {((specificAnalytics.toxicGeneralCount / specificAnalytics.totalComments) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                </div>
+              </div>
+              
+              <div className="p-6 bg-white border-l-4 border-yellow-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Potential Sarcasm</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {specificAnalytics.potentialSarcasm}
+                    </p>
+                    <p className="text-sm text-slate-500">Positive + Toxic</p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-yellow-500" />
+                </div>
+              </div>
+              
+              <div className="p-6 bg-white border-l-4 border-purple-500 shadow-lg rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-700">Average Engagement</h3>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {specificVideoStats?.mean_likes ? Math.round(specificVideoStats.mean_likes) : 0}
+                    </p>
+                    <p className="text-sm text-slate-500">average likes</p>
+                  </div>
+                  <Users className="w-8 h-8 text-purple-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Gráficos específicos del video */}
+            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+              {/* Radar Chart - Perfil completo de toxicidad */}
+              <div className="p-6 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Video Toxicity Profile
+                </h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={specificChartData.radarData}>
+                      <PolarGrid />
+                      <PolarAngleAxis 
+                        dataKey="type" 
+                        fontSize={10}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <PolarRadiusAxis 
+                        angle={90} 
+                        domain={[0, 'dataMax']}
+                        fontSize={8}
+                      />
+                      <Radar
+                        name="Percentage"
+                        dataKey="value"
+                        stroke={COLORS.toxic}
+                        fill={COLORS.toxic}
+                        fillOpacity={0.3}
+                        strokeWidth={2}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value}%`, "Percentage"]}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Pie Chart - Sentimientos (contexto) */}
+              <div className="p-6 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Emotional Context
+                </h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={specificChartData.sentimentChart}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        innerRadius={40}
+                        paddingAngle={5}
+                        dataKey="count"
+                        label={({ sentiment, percentage }) => `${sentiment}: ${percentage}%`}
+                      >
+                        {specificChartData.sentimentChart?.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.sentiment === 'Positive' ? COLORS.positive : 
+                                  entry.sentiment === 'Negative' ? COLORS.negative : COLORS.neutral} 
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Scatter Plot - Correlación sentiment vs toxicity */}
+              <div className="p-6 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Sentiment - Toxicity Correlation
+                </h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart data={specificChartData.scatterData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number" 
+                        dataKey="x" 
+                        name="Sentiment Score"
+                        domain={[-1, 1]}
+                        tickFormatter={(value) => value.toFixed(1)}
+                      />
+                      <YAxis 
+                        type="number" 
+                        dataKey="y" 
+                        name="Toxicity Score"
+                        domain={[0, 1]}
+                        tickFormatter={(value) => value.toFixed(1)}
+                      />
+                      <Tooltip 
+                        cursor={{ strokeDasharray: '3 3' }}
+                        formatter={(value, name) => [
+                          typeof value === 'number' ? value.toFixed(2) : value, 
+                          name === 'x' ? 'Sentiment Score' : 
+                          name === 'y' ? 'Toxicity Score' : 
+                          name === 'size' ? 'Likes' : name
+                        ]}
+                        labelFormatter={() => 'Comment'}
+                      />
+                      <Scatter 
+                        name="Comments" 
+                        dataKey="y" 
+                        fill={(entry) => entry.isToxic ? COLORS.toxic : COLORS.success}
+                        fillOpacity={0.6}
+                      />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 text-sm text-slate-600">
+                  <p><strong>Interpretation:</strong> Points in the upper right quadrant (positive + toxic) may indicate sarcasm.</p>
+                </div>
+              </div>
+
+              {/* Detector de sarcasmo */}
+              <div className="p-6 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Sarcasm Detector
+                </h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={specificChartData.sarcasmData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        innerRadius={40}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`}
+                      >
+                        {specificChartData.sarcasmData?.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.name === 'Potential Sarcasm' ? COLORS.warning : COLORS.neutral} 
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 text-sm text-slate-600">
+                  <p><strong>Criteria:</strong> Comments classified as positive but detected as toxic.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Timeline temporal si hay datos */}
+            {specificChartData.timelineData?.length > 1 && (
+              <div className="p-6 mb-8 bg-white shadow-lg rounded-xl">
+                <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                  Temporal Evolution of Toxicity
+                </h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={specificChartData.timelineData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                      />
+                      <YAxis yAxisId="left" />
+                      <YAxis yAxisId="right" orientation="right" />
+                      <Tooltip 
+                        labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                        formatter={(value, name) => [
+                          name === 'toxicRate' ? `${value}%` : value,
+                          name === 'total' ? 'Total Comments' : 
+                          name === 'toxic' ? 'Toxic Comments' : 'Toxicity Rate'
+                        ]}
+                      />
+                      <Legend />
+                      <Bar 
+                        yAxisId="left" 
+                        dataKey="total" 
+                        fill={COLORS.secondary} 
+                        name="Total Comments"
+                        fillOpacity={0.6}
+                      />
+                      <Bar 
+                        yAxisId="left" 
+                        dataKey="toxic" 
+                        fill={COLORS.toxic} 
+                        name="Toxic Comments"
+                        fillOpacity={0.8}
+                      />
+                      <Line 
+                        yAxisId="right" 
+                        type="monotone" 
+                        dataKey="toxicRate" 
+                        stroke={COLORS.warning} 
+                        strokeWidth={3}
+                        name="Toxicity Rate (%)"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Evaluación de riesgo */}
+            <div className="p-6 mb-8 bg-white shadow-lg rounded-xl">
+              <h2 className="mb-4 text-xl font-semibold text-slate-800">
+                Video Risk Assessment
+              </h2>
+              
+              {(() => {
+                const toxicRate = (specificAnalytics.toxicGeneralCount / specificAnalytics.totalComments * 100);
+                const riskLevel = toxicRate > 20 ? 'High' : toxicRate > 10 ? 'Medium' : toxicRate > 5 ? 'Low' : 'Minimal';
+                const riskColor = toxicRate > 20 ? 'red' : toxicRate > 10 ? 'yellow' : toxicRate > 5 ? 'orange' : 'green';
+                
+                // Tipo más problemático
+                const mostProblematicType = Object.entries(specificAnalytics.toxicityBreakdown)
+                  .filter(([, data]) => data.count > 0)
+                  .sort(([,a], [,b]) => b.count - a.count)[0];
+                
+                return (
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <div className={`p-4 rounded-lg border-l-4 ${
+                      riskColor === 'red' ? 'border-red-500 bg-red-50' :
+                      riskColor === 'yellow' ? 'border-yellow-500 bg-yellow-50' :
+                      riskColor === 'orange' ? 'border-orange-500 bg-orange-50' :
+                      'border-green-500 bg-green-50'
+                    }`}>
+                      <h3 className="font-semibold text-slate-700">Risk Level</h3>
+                      <p className={`text-2xl font-bold ${
+                        riskColor === 'red' ? 'text-red-700' :
+                        riskColor === 'yellow' ? 'text-yellow-700' :
+                        riskColor === 'orange' ? 'text-orange-700' :
+                        'text-green-700'
+                      }`}>
+                        {riskLevel}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {toxicRate.toFixed(1)}% toxic comments
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 border-l-4 border-blue-500 rounded-lg bg-blue-50">
+                      <h3 className="font-semibold text-slate-700">Most Problematic Type</h3>
+                      <p className="text-xl font-bold text-blue-700">
+                        {mostProblematicType ? 
+                          TOXICITY_LABELS[mostProblematicType[0]] : 'None'}
+                      </p>
+                      <p className="text-sm text-blue-600">
+                        {mostProblematicType ? 
+                          `${mostProblematicType[1].count} comments` : 'N/A'}
+                      </p>
+                    </div>
+                    
+                    <div className="p-4 border-l-4 border-purple-500 rounded-lg bg-purple-50">
+                      <h3 className="font-semibold text-slate-700">Recommendation</h3>
+                      <p className="text-sm text-purple-700">
+                        {toxicRate > 20 ? 'Urgent moderation required' :
+                         toxicRate > 10 ? 'Review highlighted comments' :
+                         toxicRate > 5 ? 'Regular monitoring recommended' :
+                         'Healthy community'}
+                      </p>
+                      {specificAnalytics.potentialSarcasm > 0 && (
+                        <p className="mt-2 text-xs text-purple-600">
+                          ⚠️ Potential sarcasm detected: manual review advised
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </>
+        )}
+
+        {/* Mensaje cuando no hay video seleccionado */}
+        {activeView === 'specific' && !selectedVideoId && (
+          <div className="py-20 text-center">
+            <Target className="w-16 h-16 mx-auto mb-4 text-slate-400" />
+            <h3 className="mb-2 text-xl font-semibold text-slate-600">
+              Select a video to analyze
+            </h3>
+            <p className="text-slate-500">
+              Choose a video from the dropdown menu to view its detailed toxicity analysis
+            </p>
+          </div>
+        )}
+
+        {/* Mensaje cuando no hay datos */}
+        {activeView === 'global' && (!globalAnalytics || globalAnalytics.totalComments === 0) && (
+          <div className="py-20 text-center">
+            <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-400" />
+            <h3 className="mb-2 text-xl font-semibold text-slate-600">
+              No data available
+            </h3>
+            <p className="text-slate-500">
+              No analyzed comments found in the database
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Statistics;
