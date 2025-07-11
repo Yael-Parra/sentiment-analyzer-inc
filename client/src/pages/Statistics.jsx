@@ -21,9 +21,12 @@ import {
 import ToxicityDistribution from '../components/charts/global/ToxicityDistribution';
 import VideoHeatmap from '../components/charts/global/VideoHeatmap';
 import { GlobalMetricCards, SpecificMetricCards } from '../components/charts/global/MetricCards';
+import ToxicityRadar from '../components/charts/video/ToxicityRadar';
+import SentimentPie from '../components/charts/video/SentimentPie';
+import RiskAssessment from '../components/charts/video/RiskAssessment';
 
 const Statistics = () => {
-  // Extraer correctamente el videoId de la URL
+  // Extraer correctamesnte el videoId de la URL
   const urlPath = window.location.pathname;
   const pathParts = urlPath.split('/').filter(part => part !== '');
   const videoIdFromUrl = pathParts.length > 1 && pathParts[0] === 'statistics' && pathParts[1] !== '' ? pathParts[1] : null;
@@ -182,22 +185,23 @@ const Statistics = () => {
               specificVideoComments={specificVideoComments}
               specificVideoStats={specificVideoStats}
             />
+
+            {/* Gráficos específicos del video */}
+            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+              {/* Radar Chart - Perfil completo de toxicidad */}
+              <ToxicityRadar specificVideoComments={specificVideoComments} />
+              
+              {/* Pie Chart - Sentimientos (contexto) */}
+              <SentimentPie specificVideoComments={specificVideoComments} />
+            </div>
+            
+            {/* Evaluación de riesgo */}
+            <RiskAssessment specificVideoComments={specificVideoComments} />
             
           </>
         )}
 
-        {/* Mensaje cuando no hay video seleccionado */}
-        {activeView === 'specific' && !selectedVideoId && (
-          <div className="py-20 text-center">
-            <Target className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-            <h3 className="mb-2 text-xl font-semibold text-slate-600">
-              Select a video to analyze
-            </h3>
-            <p className="text-slate-500">
-              Choose a video from the dropdown menu to view its detailed toxicity analysis
-            </p>
-          </div>
-        )}
+
       </div>
     </div>
   );
