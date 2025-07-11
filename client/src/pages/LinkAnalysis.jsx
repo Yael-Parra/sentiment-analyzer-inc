@@ -73,11 +73,14 @@ const LinkAnalysis = () => {
     console.log("Iniciando análisis..."); // Debug
     const data = await analyzeYouTubeVideo(videoUrl, maxComments);
     console.log("Datos recibidos:", data); // Debug
-    const videoId = extractVideoIdFromUrl(videoUrl);
-    navigate(`/statistics/${videoId}`);
     if (!data) {
       throw new Error("No se recibieron datos del servidor");
     }
+    // const videoId = extractVideoIdFromUrl(videoUrl);
+    // navigate(`/statistics/${videoId}`);
+    // if (!data) {
+    //   throw new Error("No se recibieron datos del servidor");
+    // }
 
     // Validación de estructura mínima
     if (!data.total_comments && !data.toxicity_stats) {
@@ -241,7 +244,19 @@ const LinkAnalysis = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === 'results') {
+                    const videoId = extractVideoIdFromUrl(videoUrl);
+                    if (videoId) {
+                      navigate(`/statistics/${videoId}`);
+                    } else {
+                      // Manejar el caso cuando no hay videoId válido
+                      console.error("URL de video no válida");
+                    }
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                   activeTab === tab.id
                     ? 'bg-red-500 text-white shadow-md'
@@ -254,7 +269,7 @@ const LinkAnalysis = () => {
             );
           })}
         </div>
-
+        
         {/* Error Message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
