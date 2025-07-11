@@ -42,7 +42,9 @@ class Comment(BaseModel):
     is_self_promotional: Optional[bool] = None
     has_url: Optional[bool] = None
     has_tag: Optional[bool] = None
-    like_count_comment: Optional[int] = None
+    
+    # CAMBIO AQUÍ: Usar like_count en lugar de like_count_comment
+    like_count: Optional[int] = None
     reply_count: Optional[int] = None
     author: Optional[str] = None
     
@@ -61,7 +63,6 @@ class VideoStatistics(BaseModel):
     engagement_stats: Dict[str, Any] = {}
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
 
 class PredictionStats(BaseModel):
     count: int

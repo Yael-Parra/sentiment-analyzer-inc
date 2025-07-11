@@ -26,7 +26,8 @@ import {
   Link,
   Hash,
   Shield,
-  Activity
+  Activity,
+  ThumbsUp
 } from 'lucide-react';
 
 const LinkAnalysis = () => {
@@ -39,6 +40,14 @@ const LinkAnalysis = () => {
   const [serverStatus, setServerStatus] = useState('unknown');
   const [activeTab, setActiveTab] = useState('input');
   const [maxComments, setMaxComments] = useState(100);
+
+  // Función para formatear números grandes
+  const formatNumber = (num) => {
+    if (!num) return '0';
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
 
   // Verificar estado del servidor al cargar
   useEffect(() => {
@@ -76,11 +85,6 @@ const LinkAnalysis = () => {
     if (!data) {
       throw new Error("No se recibieron datos del servidor");
     }
-    // const videoId = extractVideoIdFromUrl(videoUrl);
-    // navigate(`/statistics/${videoId}`);
-    // if (!data) {
-    //   throw new Error("No se recibieron datos del servidor");
-    // }
 
     // Validación de estructura mínima
     if (!data.total_comments && !data.toxicity_stats) {
@@ -118,7 +122,11 @@ const LinkAnalysis = () => {
         comments_with_urls: 0,
         url_percentage: 0,
         mean_likes: 0,
-        total_likes: 0
+        total_likes: 0,
+        // Nuevos campos del video
+        video_likes_total: 0,
+        video_views_total: 0,
+        video_comments_total: 0
       },
       comentarios: data.comments || []
     });
@@ -443,7 +451,7 @@ const LinkAnalysis = () => {
               </div>
             )}
 
-            {/* Engagement Stats */}
+            {/* Engagement Stats - SECCIÓN MEJORADA */}
             {analysisData.engagement_stats && (
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -451,31 +459,65 @@ const LinkAnalysis = () => {
                   Estadísticas de Engagement
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg text-center">
-                    <Link className="mx-auto mb-2 text-blue-500" size={24} />
-                    <p className="text-sm text-gray-600">Comentarios con URLs</p>
-                    <p className="text-2xl font-bold">{analysisData.engagement_stats.comments_with_urls}</p>
-                    <p className="text-xs text-gray-500">{analysisData.engagement_stats.url_percentage}%</p>
-                  </div>
+                {/* Estadísticas del Video */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold mb-3 text-gray-700">Estadísticas del Video</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg text-center border border-green-200">
+                      <ThumbsUp className="mx-auto mb-2 text-green-600" size={24} />
+                      <p className="text-sm text-gray-600">Likes del Video</p>
+                      <p className="text-2xl font-bold text-green-700">
+                        {formatNumber(analysisData.engagement_stats.video_likes_total)}
+                      </p>
+                    </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg text-center">
-                    <Hash className="mx-auto mb-2 text-green-500" size={24} />
-                    <p className="text-sm text-gray-600">Comentarios con Tags</p>
-                    <p className="text-2xl font-bold">{analysisData.engagement_stats.comments_with_tags}</p>
-                    <p className="text-xs text-gray-500">{analysisData.engagement_stats.tag_percentage}%</p>
-                  </div>
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg text-center border border-blue-200">
+                      <Eye className="mx-auto mb-2 text-blue-600" size={24} />
+                      <p className="text-sm text-gray-600">Visualizaciones</p>
+                      <p className="text-2xl font-bold text-blue-700">
+                        {formatNumber(analysisData.engagement_stats.video_views_total)}
+                      </p>
+                    </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg text-center">
-                    <Heart className="mx-auto mb-2 text-pink-500" size={24} />
-                    <p className="text-sm text-gray-600">Likes Totales</p>
-                    <p className="text-2xl font-bold">{analysisData.engagement_stats.total_likes}</p>
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg text-center border border-purple-200">
+                      <MessageCircle className="mx-auto mb-2 text-purple-600" size={24} />
+                      <p className="text-sm text-gray-600">Comentarios del Video</p>
+                      <p className="text-2xl font-bold text-purple-700">
+                        {formatNumber(analysisData.engagement_stats.video_comments_total)}
+                      </p>
+                    </div>
                   </div>
+                </div>
 
-                  <div className="bg-gray-50 p-4 rounded-lg text-center">
-                    <TrendingUp className="mx-auto mb-2 text-orange-500" size={24} />
-                    <p className="text-sm text-gray-600">Engagement Rate</p>
-                    <p className="text-2xl font-bold">{analysisData.engagement_stats.engagement_rate}%</p>
+                {/* Estadísticas de Comentarios Analizados */}
+                <div>
+                  <h4 className="text-lg font-semibold mb-3 text-gray-700">Comentarios Analizados</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <Link className="mx-auto mb-2 text-blue-500" size={24} />
+                      <p className="text-sm text-gray-600">Comentarios con URLs</p>
+                      <p className="text-2xl font-bold">{analysisData.engagement_stats.comments_with_urls}</p>
+                      <p className="text-xs text-gray-500">{analysisData.engagement_stats.url_percentage}%</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <Hash className="mx-auto mb-2 text-green-500" size={24} />
+                      <p className="text-sm text-gray-600">Comentarios con Tags</p>
+                      <p className="text-2xl font-bold">{analysisData.engagement_stats.comments_with_tags}</p>
+                      <p className="text-xs text-gray-500">{analysisData.engagement_stats.tag_percentage}%</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <Heart className="mx-auto mb-2 text-pink-500" size={24} />
+                      <p className="text-sm text-gray-600">Likes en Comentarios</p>
+                      <p className="text-2xl font-bold">{formatNumber(analysisData.engagement_stats.total_likes)}</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <TrendingUp className="mx-auto mb-2 text-orange-500" size={24} />
+                      <p className="text-sm text-gray-600">Engagement Rate</p>
+                      <p className="text-2xl font-bold">{analysisData.engagement_stats.engagement_rate}%</p>
+                    </div>
                   </div>
                 </div>
               </div>
