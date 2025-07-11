@@ -16,6 +16,7 @@ import SentimentPie from '../components/charts/video/SentimentPie';
 import CorrelationScatter from '../components/charts/video/CorrelationScatter';
 import SarcasmDetector from '../components/charts/video/SarcasmDetector';
 import RiskAssessment from '../components/charts/video/RiskAssessment';
+import CommentsList from '../components/charts/video/CommentsList';
 
 const Statistics = () => {
   // Extraer correctamesnte el videoId de la URL
@@ -199,8 +200,11 @@ const Statistics = () => {
             {/* Detector de sarcasmo */}
             <SarcasmDetector specificVideoComments={specificVideoComments} />
           </div>
-            {/* Evaluación de riesgo - AGREGAR AQUÍ */}
+            {/* Evaluación de riesgo */}
             <RiskAssessment specificVideoComments={specificVideoComments} />
+
+            {/* Lista de comentarios  */}
+            <CommentsList specificVideoComments={specificVideoComments} />
           </>
         )}
       </div>
