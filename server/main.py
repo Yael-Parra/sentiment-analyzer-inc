@@ -7,6 +7,10 @@ from server.database.connection_db import supabase
 from server.database.save_comments import get_comments_by_video, delete_comments_by_video, get_video_statistics
 from typing import List
 import json 
+from server.monitoring.real_time import video_monitor
+from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
+from datetime import datetime
 
 app = FastAPI()
 
@@ -198,3 +202,101 @@ def delete_sentiment_analyzer_by_video_id(video_id: str):
             raise HTTPException(status_code=500, detail="Error al eliminar comentarios")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+
+## ENDPOINTS MONITOREO EN TIEMPO REAL: 
+
+@app.post("/monitor/start/{video_id}")
+async def start_monitoring(video_id: str, interval_minutes: int = 5):
+
+   # Inicia monitoreo en tiempo real de un video
+    success = await video_monitor.start_monitoring(video_id, interval_minutes)
+    if success:
+        return {
+            "message": f"Monitoreo iniciado para video {video_id}",
+            "video_id": video_id,
+            "interval_minutes": interval_minutes,
+            "status": "active"
+        }
+    else:
+        return {
+            "message": f"Video {video_id} ya está siendo monitoreado",
+            "video_id": video_id,
+            "status": "already_active"
+        }
+
+@app.delete("/monitor/stop/{video_id}")
+async def stop_monitoring(video_id: str):
+    #  Detiene monitoreo de un video
+    
+    success = video_monitor.stop_monitoring(video_id)
+    if success:
+        return {
+            "message": f"Monitoreo detenido para video {video_id}",
+            "video_id": video_id,
+            "status": "stopped"
+        }
+    else:
+        return {
+            "message": f"Video {video_id} no está siendo monitoreado",
+            "video_id": video_id,
+            "status": "not_active"
+        }
+
+@app.get("/monitor/status")
+async def get_monitoring_status():
+   #  Obtiene estado de todos los monitores activos
+
+    return video_monitor.get_monitoring_status()
+
+@app.get("/monitor/status/{video_id}")
+async def get_video_monitoring_status(video_id: str):
+   #   Obtiene estado específico de monitoreo de un video
+    status = video_monitor.get_monitoring_status()
+    if video_id in status["monitor_data"]:
+        return {
+            "video_id": video_id,
+            "is_active": True,
+            "data": status["monitor_data"][video_id]
+        }
+    else:
+        return {
+            "video_id": video_id,
+            "is_active": False,
+            "data": None
+        }
+
+@app.websocket("/ws/monitor/{video_id}")
+async def websocket_monitor_endpoint(websocket: WebSocket, video_id: str):
+   #   WebSocket para recibir notificaciones en tiempo real
+    await websocket.accept()
+    video_monitor.add_websocket_connection(video_id, websocket)
+    
+    try:
+        # Enviar confirmación inicial
+        await websocket.send_json({
+            "type": "connection_established",
+            "video_id": video_id,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Mantener conexión activa
+        while True:
+            # Ping cada 30 segundos
+            await asyncio.sleep(30)
+            await websocket.send_json({
+                "type": "ping",
+                "video_id": video_id,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+    except WebSocketDisconnect:
+        print(f"🔌 Cliente desconectado del monitoreo de video {video_id}")
+        video_monitor.remove_websocket_connection(video_id, websocket)
+    except Exception as e:
+        print(f"❌ Error en WebSocket para video {video_id}: {e}")
+        video_monitor.remove_websocket_connection(video_id, websocket)
+
+
