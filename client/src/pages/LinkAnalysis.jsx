@@ -27,7 +27,13 @@ import {
   Hash,
   Shield,
   Activity,
-  ThumbsUp
+  ThumbsUp,
+  Zap,
+  BarChart3,
+  CheckCircle,
+  Clock,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 const LinkAnalysis = () => {
@@ -65,12 +71,12 @@ const LinkAnalysis = () => {
 
  const handleAnalyze = async () => {
   if (!videoUrl.trim()) {
-    setError('Por favor, ingresa una URL de YouTube válida');
+    setError('Please enter a valid YouTube URL');
     return;
   }
 
   if (!isValidYouTubeUrl(videoUrl)) {
-    setError('La URL de YouTube no es válida');
+    setError('The YouTube URL is not valid');
     return;
   }
 
@@ -79,17 +85,17 @@ const LinkAnalysis = () => {
   setAnalysisData({}); // Resetear datos anteriores
 
   try {
-    console.log("Iniciando análisis..."); // Debug
+    console.log("Starting analysis..."); // Debug
     const data = await analyzeYouTubeVideo(videoUrl, maxComments);
-    console.log("Datos recibidos:", data); // Debug
+    console.log("Data received:", data); // Debug
     if (!data) {
-      throw new Error("No se recibieron datos del servidor");
+      throw new Error("No data received from server");
     }
 
     // Validación de estructura mínima
     if (!data.total_comments && !data.toxicity_stats) {
-      console.warn("Datos incompletos recibidos:", data);
-      throw new Error("Los datos recibidos están incompletos");
+      console.warn("Incomplete data received:", data);
+      throw new Error("The received data is incomplete");
     }
 
     setAnalysisData({
@@ -133,8 +139,8 @@ const LinkAnalysis = () => {
 
     setActiveTab('results');
   } catch (err) {
-    console.error("Error en handleAnalyze:", err);
-    setError(err.message || "Ocurrió un error al analizar el video");
+    console.error("Error in handleAnalyze:", err);
+    setError(err.message || "An error occurred while analyzing the video");
     
     // Mostrar datos de debug en UI
     setAnalysisData({
@@ -149,7 +155,7 @@ const LinkAnalysis = () => {
 
   const handleGetSavedComments = async () => {
     if (!videoUrl.trim()) {
-      setError('Por favor, ingresa una URL de YouTube para buscar comentarios guardados');
+      setError('Please enter a YouTube URL to search for saved comments');
       return;
     }
 
@@ -170,7 +176,7 @@ const LinkAnalysis = () => {
 
   const handleDeleteSavedComments = async () => {
     if (!videoUrl.trim()) {
-      setError('Por favor, ingresa una URL de YouTube');
+      setError('Please enter a YouTube URL');
       return;
     }
 
@@ -181,7 +187,7 @@ const LinkAnalysis = () => {
     try {
       await deleteSavedComments(videoId);
       setSavedComments([]);
-      alert('Comentarios eliminados exitosamente');
+      alert('Comments deleted successfully');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -190,9 +196,9 @@ const LinkAnalysis = () => {
   };
 
   const getToxicityLevel = (probability) => {
-    if (probability >= 0.7) return { label: 'Alto', color: 'bg-red-500', textColor: 'text-red-500' };
-    if (probability >= 0.4) return { label: 'Medio', color: 'bg-yellow-500', textColor: 'text-yellow-500' };
-    return { label: 'Bajo', color: 'bg-green-500', textColor: 'text-green-500' };
+    if (probability >= 0.7) return { label: 'High', color: 'bg-red-500', textColor: 'text-red-500' };
+    if (probability >= 0.4) return { label: 'Medium', color: 'bg-yellow-500', textColor: 'text-yellow-500' };
+    return { label: 'Low', color: 'bg-green-500', textColor: 'text-green-500' };
   };
 
   const getSentimentColor = (sentiment) => {
@@ -215,138 +221,139 @@ const LinkAnalysis = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 py-8">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-purple-50">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-red-600 mb-2">
-            YouTube Video Analysis
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <Zap size={16} />
+            AI-Powered Analysis
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+            YouTube Video <span className="text-red-500">Analysis</span>
           </h1>
-          <p className="text-gray-600">
-            Analiza sentimientos y toxicidad en comentarios de YouTube
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Analyze sentiment and toxicity in YouTube comments with advanced AI
           </p>
           
           {/* Server Status */}
-          <div className="mt-4 flex justify-center">
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+          <div className="mt-6 flex justify-center">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium shadow-sm ${
               serverStatus === 'online' 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-red-100 text-red-700'
+                ? 'bg-green-100 text-green-700 border border-green-200' 
+                : 'bg-red-100 text-red-700 border border-red-200'
             }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                serverStatus === 'online' ? 'bg-green-500' : 'bg-red-500'
-              }`}></div>
-              Servidor: {serverStatus === 'online' ? 'En línea' : 'Desconectado'}
+              {serverStatus === 'online' ? <Wifi size={16} /> : <WifiOff size={16} />}
+              Server: {serverStatus === 'online' ? 'Online' : 'Offline'}
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap justify-center mb-8 bg-white rounded-lg shadow-md p-2">
-          {[
-            { id: 'input', label: 'Análisis', icon: Play },
-            { id: 'results', label: 'Resultados', icon: TrendingUp },
-            { id: 'saved', label: 'Guardados', icon: Save }
-          ].map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  if (tab.id === 'results') {
-                    const videoId = extractVideoIdFromUrl(videoUrl);
-                    if (videoId) {
-                      navigate(`/statistics/${videoId}`);
+        <div className="flex flex-wrap justify-center mb-8">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-2 border border-white/20">
+            {[
+              { id: 'input', label: 'Analysis', icon: Play, color: 'text-blue-500' },
+              { id: 'results', label: 'Results', icon: BarChart3, color: 'text-green-500' }
+            ].map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (tab.id === 'results') {
+                      const videoId = extractVideoIdFromUrl(videoUrl);
+                      if (videoId) {
+                        navigate(`/statistics/${videoId}`);
+                      } else {
+                        console.error("Invalid video URL");
+                      }
                     } else {
-                      // Manejar el caso cuando no hay videoId válido
-                      console.error("URL de video no válida");
+                      setActiveTab(tab.id);
                     }
-                  } else {
-                    setActiveTab(tab.id);
-                  }
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-red-500 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Icon size={18} />
-                {tab.label}
-              </button>
-            );
-          })}
+                  }}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
+                    activeTab === tab.id
+                      ? 'bg-red-500 text-white shadow-lg transform scale-105'
+                      : 'text-gray-600 hover:bg-white/50 hover:text-red-500'
+                  }`}
+                >
+                  <Icon size={18} className={activeTab !== tab.id ? tab.color : ''} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         
         {/* Error Message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={20} />
-              {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl mb-8 shadow-sm">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={20} className="text-red-500" />
+              <span className="font-medium">{error}</span>
             </div>
           </div>
         )}
 
         {/* Input Tab */}
         {activeTab === 'input' && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Play className="text-red-500" />
-              Configurar Análisis
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mb-8 border border-white/20">
+            <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-xl">
+                <Play className="text-red-500" size={24} />
+              </div>
+              Configure Analysis
             </h2>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL del Video de YouTube
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  YouTube Video URL
                 </label>
                 <input
                   type="text"
-                  placeholder="https://www.youtube.com/watch?v=VIDEO_ID o solo VIDEO_ID"
+                  placeholder="https://www.youtube.com/watch?v=VIDEO_ID or just VIDEO_ID"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-6 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-red-100 focus:border-red-500 transition-all duration-300 text-lg"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número máximo de comentarios a analizar
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Maximum number of comments to analyze
                 </label>
                 <select
                   value={maxComments}
                   onChange={(e) => setMaxComments(Number(e.target.value))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-6 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-red-100 focus:border-red-500 transition-all duration-300 text-lg"
                 >
-                  <option value={50}>50 comentarios</option>
-                  <option value={100}>100 comentarios</option>
-                  <option value={200}>200 comentarios</option>
-                  <option value={500}>500 comentarios</option>
+                  <option value={50}>50 comments</option>
+                  <option value={100}>100 comments</option>
+                  <option value={200}>200 comments</option>
+                  <option value={500}>500 comments</option>
                 </select>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   onClick={handleAnalyze}
                   disabled={loading}
-                  className="flex-1 bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 bg-gradient-to-r from-red-500 to-pink-600 text-white px-8 py-4 rounded-2xl hover:from-red-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-lg"
                 >
                   {loading ? (
-                    <RefreshCw className="animate-spin" size={20} />
+                    <>
+                      <RefreshCw className="animate-spin" size={24} />
+                      Analyzing...
+                    </>
                   ) : (
-                    <Play size={20} />
+                    <>
+                      <Play size={24} />
+                      Start Analysis
+                    </>
                   )}
-                  {loading ? 'Analizando...' : 'Analizar Video'}
-                </button>
-
-                <button
-                  onClick={handleGetSavedComments}
-                  disabled={loading}
-                  className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-                >
-                  <Eye size={20} />
-                  Ver Guardados
                 </button>
               </div>
             </div>
@@ -355,58 +362,62 @@ const LinkAnalysis = () => {
 
         {/* Results Tab */}
         {activeTab === 'results' && analysisData && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Video Info */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                <TrendingUp className="text-green-500" />
-                Información del Video
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
+              <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-xl">
+                  <TrendingUp className="text-green-500" size={24} />
+                </div>
+                Video Information
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg text-center">
-                  <MessageCircle className="mx-auto mb-2 text-blue-500" size={24} />
-                  <p className="text-sm text-gray-600">Total Comentarios</p>
-                  <p className="text-2xl font-bold">{analysisData.total_comments}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl text-center border border-blue-200 hover:shadow-lg transition-all duration-300">
+                  <MessageCircle className="mx-auto mb-3 text-blue-500" size={32} />
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Total Comments</p>
+                  <p className="text-3xl font-bold text-blue-700">{analysisData.total_comments}</p>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg text-center">
-                  <AlertTriangle className="mx-auto mb-2 text-red-500" size={24} />
-                  <p className="text-sm text-gray-600">Comentarios Tóxicos</p>
-                  <p className="text-2xl font-bold">{analysisData.toxic_comments}</p>
+                <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl text-center border border-red-200 hover:shadow-lg transition-all duration-300">
+                  <AlertTriangle className="mx-auto mb-3 text-red-500" size={32} />
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Toxic Comments</p>
+                  <p className="text-3xl font-bold text-red-700">{analysisData.toxic_comments}</p>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg text-center">
-                  <Heart className="mx-auto mb-2 text-pink-500" size={24} />
-                  <p className="text-sm text-gray-600">Promedio Likes</p>
-                  <p className="text-2xl font-bold">{analysisData.avg_likes}</p>
+                <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-2xl text-center border border-pink-200 hover:shadow-lg transition-all duration-300">
+                  <Heart className="mx-auto mb-3 text-pink-500" size={32} />
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Average Likes</p>
+                  <p className="text-3xl font-bold text-pink-700">{Math.round(analysisData.avg_likes)}</p>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg text-center">
-                  <Shield className="mx-auto mb-2 text-purple-500" size={24} />
-                  <p className="text-sm text-gray-600">Nivel General</p>
-                  <p className="text-2xl font-bold">{analysisData.general_toxicity_level}</p>
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl text-center border border-purple-200 hover:shadow-lg transition-all duration-300">
+                  <Shield className="mx-auto mb-3 text-purple-500" size={32} />
+                  <p className="text-sm font-semibold text-gray-600 mb-1">General Level</p>
+                  <p className="text-3xl font-bold text-purple-700">{analysisData.general_toxicity_level}</p>
                 </div>
               </div>
             </div>
 
             {/* Sentiment Analysis */}
             {analysisData.sentimientos && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Activity className="text-blue-500" />
-                  Análisis de Sentimientos
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-xl">
+                    <Activity className="text-blue-500" size={24} />
+                  </div>
+                  Sentiment Analysis
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {Object.entries(analysisData.sentimientos.sentiment_types_distribution || {}).map(([sentiment, count]) => (
-                    <div key={sentiment} className="bg-gray-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl mb-2">
+                    <div key={sentiment} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl text-center border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                      <div className="text-4xl mb-3">
                         {getSentimentIcon(sentiment)}
                       </div>
-                      <p className="font-medium capitalize">{sentiment}</p>
-                      <p className="text-2xl font-bold">{count}</p>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getSentimentColor(sentiment)}`}>
+                      <p className="font-semibold capitalize text-lg text-gray-700">{sentiment}</p>
+                      <p className="text-3xl font-bold text-gray-800 my-2">{count}</p>
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getSentimentColor(sentiment)}`}>
                         {((count / analysisData.total_comments) * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -417,33 +428,35 @@ const LinkAnalysis = () => {
 
             {/* Toxicity Analysis */}
             {analysisData.barras_toxicidad && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <AlertTriangle className="text-red-500" />
-                  Análisis de Toxicidad
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-xl">
+                    <AlertTriangle className="text-red-500" size={24} />
+                  </div>
+                  Toxicity Analysis
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {Object.entries(analysisData.barras_toxicidad).map(([type, data]) => {
                     const total = data.true + data.false;
                     const percentage = total > 0 ? ((data.true / total) * 100).toFixed(1) : 0;
                     
                     return (
-                      <div key={type} className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-medium mb-2 capitalize">
+                      <div key={type} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border hover:shadow-lg transition-all duration-300">
+                        <h4 className="font-semibold mb-3 capitalize text-lg text-gray-700">
                           {type.replace('is_', '').replace('_', ' ')}
                         </h4>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="text-red-600">Detectado: {data.true}</span>
-                          <span className="text-green-600">Limpio: {data.false}</span>
+                        <div className="flex justify-between text-sm mb-3">
+                          <span className="text-red-600 font-medium">Detected: {data.true}</span>
+                          <span className="text-green-600 font-medium">Clean: {data.false}</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
                           <div
-                            className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                            className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-500"
                             style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">{percentage}% tóxico</p>
+                        <p className="text-sm text-gray-600 font-medium">{percentage}% toxic</p>
                       </div>
                     );
                   })}
@@ -453,36 +466,38 @@ const LinkAnalysis = () => {
 
             {/* Engagement Stats - SECCIÓN MEJORADA */}
             {analysisData.engagement_stats && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Users className="text-purple-500" />
-                  Estadísticas de Engagement
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-xl">
+                    <Users className="text-purple-500" size={24} />
+                  </div>
+                  Engagement Statistics
                 </h3>
                 
                 {/* Estadísticas del Video */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold mb-3 text-gray-700">Estadísticas del Video</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg text-center border border-green-200">
-                      <ThumbsUp className="mx-auto mb-2 text-green-600" size={24} />
-                      <p className="text-sm text-gray-600">Likes del Video</p>
-                      <p className="text-2xl font-bold text-green-700">
+                <div className="mb-8">
+                  <h4 className="text-xl font-semibold mb-4 text-gray-700">Video Statistics</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl text-center border border-green-200 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                      <ThumbsUp className="mx-auto mb-3 text-green-600" size={32} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Video Likes</p>
+                      <p className="text-3xl font-bold text-green-700">
                         {formatNumber(analysisData.engagement_stats.video_likes_total)}
                       </p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg text-center border border-blue-200">
-                      <Eye className="mx-auto mb-2 text-blue-600" size={24} />
-                      <p className="text-sm text-gray-600">Visualizaciones</p>
-                      <p className="text-2xl font-bold text-blue-700">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl text-center border border-blue-200 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                      <Eye className="mx-auto mb-3 text-blue-600" size={32} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Views</p>
+                      <p className="text-3xl font-bold text-blue-700">
                         {formatNumber(analysisData.engagement_stats.video_views_total)}
                       </p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg text-center border border-purple-200">
-                      <MessageCircle className="mx-auto mb-2 text-purple-600" size={24} />
-                      <p className="text-sm text-gray-600">Comentarios del Video</p>
-                      <p className="text-2xl font-bold text-purple-700">
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl text-center border border-purple-200 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                      <MessageCircle className="mx-auto mb-3 text-purple-600" size={32} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Video Comments</p>
+                      <p className="text-3xl font-bold text-purple-700">
                         {formatNumber(analysisData.engagement_stats.video_comments_total)}
                       </p>
                     </div>
@@ -491,32 +506,32 @@ const LinkAnalysis = () => {
 
                 {/* Estadísticas de Comentarios Analizados */}
                 <div>
-                  <h4 className="text-lg font-semibold mb-3 text-gray-700">Comentarios Analizados</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                      <Link className="mx-auto mb-2 text-blue-500" size={24} />
-                      <p className="text-sm text-gray-600">Comentarios con URLs</p>
-                      <p className="text-2xl font-bold">{analysisData.engagement_stats.comments_with_urls}</p>
-                      <p className="text-xs text-gray-500">{analysisData.engagement_stats.url_percentage}%</p>
+                  <h4 className="text-xl font-semibold mb-4 text-gray-700">Analyzed Comments</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl text-center border hover:shadow-lg transition-all duration-300">
+                      <Link className="mx-auto mb-3 text-blue-500" size={28} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Comments with URLs</p>
+                      <p className="text-2xl font-bold text-gray-800">{analysisData.engagement_stats.comments_with_urls}</p>
+                      <p className="text-xs text-gray-500 font-medium">{analysisData.engagement_stats.url_percentage}%</p>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                      <Hash className="mx-auto mb-2 text-green-500" size={24} />
-                      <p className="text-sm text-gray-600">Comentarios con Tags</p>
-                      <p className="text-2xl font-bold">{analysisData.engagement_stats.comments_with_tags}</p>
-                      <p className="text-xs text-gray-500">{analysisData.engagement_stats.tag_percentage}%</p>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl text-center border hover:shadow-lg transition-all duration-300">
+                      <Hash className="mx-auto mb-3 text-green-500" size={28} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Comments with Tags</p>
+                      <p className="text-2xl font-bold text-gray-800">{analysisData.engagement_stats.comments_with_tags}</p>
+                      <p className="text-xs text-gray-500 font-medium">{analysisData.engagement_stats.tag_percentage}%</p>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                      <Heart className="mx-auto mb-2 text-pink-500" size={24} />
-                      <p className="text-sm text-gray-600">Likes en Comentarios</p>
-                      <p className="text-2xl font-bold">{formatNumber(analysisData.engagement_stats.total_likes)}</p>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl text-center border hover:shadow-lg transition-all duration-300">
+                      <Heart className="mx-auto mb-3 text-pink-500" size={28} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Comment Likes</p>
+                      <p className="text-2xl font-bold text-gray-800">{formatNumber(analysisData.engagement_stats.total_likes)}</p>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                      <TrendingUp className="mx-auto mb-2 text-orange-500" size={24} />
-                      <p className="text-sm text-gray-600">Engagement Rate</p>
-                      <p className="text-2xl font-bold">{analysisData.engagement_stats.engagement_rate}%</p>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl text-center border hover:shadow-lg transition-all duration-300">
+                      <TrendingUp className="mx-auto mb-3 text-orange-500" size={28} />
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Engagement Rate</p>
+                      <p className="text-2xl font-bold text-gray-800">{analysisData.engagement_stats.engagement_rate}%</p>
                     </div>
                   </div>
                 </div>
@@ -525,69 +540,34 @@ const LinkAnalysis = () => {
 
             {/* Top Toxic Comments */}
             {analysisData.comentarios && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <AlertTriangle className="text-red-500" />
-                  Comentarios Más Tóxicos
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-xl">
+                    <AlertTriangle className="text-red-500" size={24} />
+                  </div>
+                  Most Toxic Comments
                 </h3>
                 
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-4 max-h-96 overflow-y-auto">
                   {getTopToxicComments(analysisData.comentarios, 10).map((comment, index) => {
                     const toxicityLevel = getToxicityLevel(comment.toxic_probability);
                     
                     return (
-                      <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${toxicityLevel.color} text-white`}>
+                      <div key={index} className="border border-gray-200 rounded-2xl p-6 hover:bg-gray-50 transition-all duration-300 hover:shadow-lg">
+                        <div className="flex justify-between items-start mb-3">
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${toxicityLevel.color} text-white shadow-sm`}>
                             {toxicityLevel.label} ({(comment.toxic_probability * 100).toFixed(1)}%)
                           </span>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Heart size={14} />
-                            {comment.like_count || 0}
+                            <Heart size={16} />
+                            <span className="font-medium">{comment.like_count || 0}</span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-700">{comment.text}</p>
+                        <p className="text-gray-700 leading-relaxed">{comment.text}</p>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Saved Comments Tab */}
-        {activeTab === 'saved' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Save className="text-purple-500" />
-                Comentarios Guardados
-              </h2>
-              
-              {savedComments.length > 0 && (
-                <button
-                  onClick={handleDeleteSavedComments}
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center gap-2"
-                >
-                  <Trash2 size={16} />
-                  Eliminar Todos
-                </button>
-              )}
-            </div>
-
-            {savedComments.length > 0 ? (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {savedComments.map((comment, index) => (
-                  <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm text-gray-700">{comment}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Save size={48} className="mx-auto mb-4 opacity-50" />
-                <p>No hay comentarios guardados para este video.</p>
               </div>
             )}
           </div>
