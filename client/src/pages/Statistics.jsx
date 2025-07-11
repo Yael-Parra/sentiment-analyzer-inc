@@ -16,7 +16,11 @@ import {
   Eye,
   BarChart3
 } from 'lucide-react';
+
+// Importar componentes
 import ToxicityDistribution from '../components/charts/global/ToxicityDistribution';
+import VideoHeatmap from '../components/charts/global/VideoHeatmap';
+import { GlobalMetricCards, SpecificMetricCards } from '../components/charts/global/MetricCards';
 
 const Statistics = () => {
   // Extraer correctamente el videoId de la URL
@@ -50,6 +54,7 @@ const Statistics = () => {
           
           setAllComments(commentsResponse.comments || []);
           setAllVideoStats(statsResponse.video_statistics || []);
+          console.log('✅ Datos globales cargados');
           
         } else if (selectedVideoId) {
           console.log('🔄 Cargando datos para video:', selectedVideoId);
@@ -60,6 +65,7 @@ const Statistics = () => {
           
           setSpecificVideoComments(commentsResponse.comments || []);
           setSpecificVideoStats(statsResponse.statistics || null);
+          console.log('✅ Datos del video cargados');
         }
       } catch (err) {
         console.error('❌ Error cargando datos:', err);
@@ -79,7 +85,7 @@ const Statistics = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen pt-24 bg-slate-50">
+    <div className="h-full min-h-screen pt-24 bg-slate-50">
       <div className="container px-4 mx-auto">
         <div className="flex items-center justify-center py-20">
           <div className="text-lg text-slate-600">Loading statistics...</div>
@@ -89,7 +95,7 @@ const Statistics = () => {
   );
 
   if (error) return (
-    <div className="min-h-screen pt-24 bg-slate-50">
+    <div className="flex flex-col min-h-screen pt-24 mt-10 mb-10 bg-slate-50">
       <div className="container px-4 mx-auto">
         <div className="flex items-center justify-center py-20">
           <div className="px-4 py-3 text-red-700 bg-red-100 border border-red-400 rounded-lg">
@@ -101,7 +107,7 @@ const Statistics = () => {
   );
 
   return (
-    <div className="h-auto min-h-screen pt-24 mt-10 mb-10 bg-slate-50">
+    <div className="h-full pt-24 mt-10 mb-10 bg-slate-50">
       <div className="container px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
@@ -146,16 +152,38 @@ const Statistics = () => {
 
         {/* Vista Global */}
         {activeView === 'global' && (
-          <div>
-            <ToxicityDistribution allComments={allComments} />
-          </div>
+          <>
+            {/* Cards de métricas clave */}
+            <GlobalMetricCards 
+              allComments={allComments} 
+              allVideoStats={allVideoStats} 
+            />
+
+            {/* Gráficos principales */}
+            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+              {/* Gráfico de distribución de toxicidad */}
+              <ToxicityDistribution allComments={allComments} />
+              
+              {/* Heatmap de videos */}
+              <VideoHeatmap 
+                allComments={allComments} 
+                allVideoStats={allVideoStats}
+                onVideoSelect={handleVideoSelect}
+              />
+            </div>
+          </>
         )}
+
         {/* Vista específica */}
-        {activeView === 'specific' && selectedVideoId && (
-          <div>
-            {/* Aquí irán los componentes de estadísticas por video */}
-            <p>Specific video view - Components will be added here</p>
-          </div>
+        {activeView === 'specific' && selectedVideoId && specificVideoComments.length > 0 && (
+          <>
+            {/* Cards específicos del video */}
+            <SpecificMetricCards 
+              specificVideoComments={specificVideoComments}
+              specificVideoStats={specificVideoStats}
+            />
+            
+          </>
         )}
 
         {/* Mensaje cuando no hay video seleccionado */}

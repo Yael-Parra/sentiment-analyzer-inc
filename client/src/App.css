@@ -1,7 +1,5 @@
-#root {
-  max-width: none;
+html, body, #root {
+  height: 100%;
   margin: 0;
   padding: 0;
-  text-align: left;
-  min-height: 100vh;
 }
