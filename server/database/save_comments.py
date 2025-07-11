@@ -214,7 +214,7 @@ def save_video_statistics(video_id: str, complete_stats: Dict[str, Any]) -> Dict
         stats_record = {
             "video_id": video_id,
             "total_comments": complete_stats.get("total_comments", 0),
-            "percentage_tagged": complete_stats.get("percentage_tagged", 0.0),
+            "percentage_toxicity": complete_stats.get("percentage_toxicity", 0.0),
             "mean_likes": complete_stats.get("mean_likes", 0.0),
             "max_likes": complete_stats.get("max_likes", 0),
             "total_likes": complete_stats.get("total_likes", 0),
