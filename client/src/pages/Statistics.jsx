@@ -5,17 +5,6 @@ import {
   getVideoStatisticsAll,
   getVideoStatisticsById
 } from '../services/services';
-import { 
-  Shield, 
-  AlertTriangle, 
-  MessageSquare, 
-  Activity,
-  Target,
-  TrendingUp,
-  Users,
-  Eye,
-  BarChart3
-} from 'lucide-react';
 
 // Importar componentes
 import ToxicityDistribution from '../components/charts/global/ToxicityDistribution';
@@ -124,20 +113,24 @@ const Statistics = () => {
           {/* Vista Toggle */}
           <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => {
-              setActiveView('global');
-              setSelectedVideoId('');
-              window.history.pushState({}, '', '/statistics');
-            }}
-            className={`px-6 py-2 rounded-full font-semibold text-lg transition-all duration-200 cursor-pointer ${
-              activeView === 'global'
-                ? 'bg-red-500 text-white shadow-lg border-2 border-red-500'
-                : 'border-2 border-slate-300 text-slate-700 bg-slate-100/60 hover:bg-red-50/70 hover:text-red-600 hover:border-red-300/60'
-            }`}
-            style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
-          >
-            Global Statistics
-          </button>
+              onClick={() => {
+                setActiveView('global');
+                setSelectedVideoId('');
+                window.history.pushState({}, '', '/statistics');
+              }}
+              className={`
+                px-6 py-2 rounded-full font-semibold text-lg transition-all duration-200 cursor-pointer
+                ${activeView === 'global'
+                  ? 'bg-red-500 text-white shadow-lg border-2 border-red-500'
+                  : 'border-2 border-slate-300 text-slate-700 bg-slate-100/60 hover:bg-red-50/70 hover:text-red-600 hover:border-red-300/60'}
+                text-sm sm:text-base md:text-lg
+                w-full sm:w-auto
+              `}
+              style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
+            >
+              Global Statistics
+            </button>
+
             
             {/* Selector de video directo */}
             <select
