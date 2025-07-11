@@ -39,4 +39,4 @@ etl/data/youtube_comments_hp2QZ0BGaps.csv.gz
 model_training/xlm-roberta-base/model-xlm-roberta-base
 model_training/xlm-roberta-base/model-xlm-roberta-robust
 model_training/xlm-roberta-base/dataset_youtube_para_etiquetar.csv
-.pyc 
+*.pyc 

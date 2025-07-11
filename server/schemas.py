@@ -38,13 +38,7 @@ class Comment(BaseModel):
     sentiment_type: Optional[str] = None
     sentiment_score: Optional[float] = None
     sentiment_intensity: Optional[str] = None
-
-    is_self_promotional: Optional[bool] = None
-    has_url: Optional[bool] = None
-    has_tag: Optional[bool] = None
-    like_count_comment: Optional[int] = None
-    reply_count: Optional[int] = None
-    author: Optional[str] = None
+    total_likes_comment: Optional[int] = 0
     
     class Config:
         extra = "allow"
@@ -52,16 +46,16 @@ class Comment(BaseModel):
 class VideoStatistics(BaseModel):
     video_id: str
     total_comments: int
-    porcentaje_tagged: float
+    percentage_tagged: float
     mean_likes: float
     max_likes: int
     mean_sentiment_score: Optional[float] = None
     sentiment_distribution: Dict[str, int] = {}
     toxicity_stats: Dict[str, Dict[str, int]] = {}
-    engagement_stats: Dict[str, Any] = {}
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
+    total_likes: Optional[int] = 0
+    self_promotional: Optional[int] = 0
 
 class PredictionStats(BaseModel):
     count: int

@@ -332,8 +332,6 @@ def clean_youtube_data(df):
     df = handle_nulls(df)
 # Step 4  convert_data_types
     df = convert_data_types(df)
-# Step 5  extract_and_remove_urls
-    df = extract_and_remove_urls(df)
 # Step 6  is_self_promotional
     df['is_self_promotional'] = df['text'].apply(is_self_promotional)
 # Step 7  detect_tags
