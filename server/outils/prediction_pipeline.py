@@ -92,7 +92,7 @@ def _calculate_basic_stats(comments: List[Comment]) -> Dict[str, Any]:
     # Toxicity percentage
     tagged_comments = sum(1 for c in comments 
                          if any(getattr(c, f"is_{field}", False) for field in TOXICITY_FIELDS))
-    percentage_tagged = (tagged_comments / total_comments * 100) if total_comments else 0
+    percentage_toxicity = (tagged_comments / total_comments * 100) if total_comments else 0
     
     return {
         "total_comments": total_comments,
@@ -100,7 +100,7 @@ def _calculate_basic_stats(comments: List[Comment]) -> Dict[str, Any]:
         "mean_likes": mean_likes,
         "max_likes": max_likes,
         # "self_promotion": self_promotion,
-        "percentage_tagged": percentage_tagged
+        "percentage_toxicity": percentage_toxicity
     }
 
 #Vamos a poner el orden del pipeline para las predicciones: 
@@ -186,7 +186,7 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
         "max_likes": basic_stats["max_likes"],
         "total_likes": basic_stats["total_likes"],
         "self_promotional": int(self_promotional_count), 
-        "percentage_tagged": basic_stats["percentage_tagged"],
+        "percentage_toxicity": basic_stats["percentage_toxicity"],
         
         # Campos JSON para video_statistics
         "sentiment_distribution": sentiment_stats["sentiment_types_distribution"],

@@ -46,7 +46,7 @@ class Comment(BaseModel):
 class VideoStatistics(BaseModel):
     video_id: str
     total_comments: int
-    percentage_tagged: float
+    percentage_toxicity: float
     mean_likes: float
     max_likes: int
     mean_sentiment_score: Optional[float] = None
