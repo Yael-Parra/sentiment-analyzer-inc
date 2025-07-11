@@ -141,3 +141,14 @@ docker-compose --env-file .env up --build
 ## 👩‍💻 Contributors
 We are a diverse team passionate about emotional analytics, content strategy, and real-time data apps.
 Feel free to explore, fork, or connect with us for ideas, feedback, or collaborations.
+
+
+| Name | GitHub | LinkedIn |
+|------|--------|----------|
+| **Pepe Ruiz** | [![GitHub](https://img.shields.io/badge/GitHub-f56a79?logo=github&logoColor=white)](https://github.com/peperuizdev) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/peperuiznieto/) |
+| **Nhoeli Salazar** | [![GitHub](https://img.shields.io/badge/GitHub-f56a79?logo=github&logoColor=white)](https://github.com/Nho89) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/nhoeli-salazar/) |
+| **Andreina Suescum** | [![GitHub](https://img.shields.io/badge/GitHub-f56a79?logo=github&logoColor=white)](https://github.com/mariasuescum) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andreina-suescum/) |
+| **Yael Parra** | [![GitHub](https://img.shields.io/badge/GitHub-f56a79?logo=github&logoColor=white)](https://github.com/Yael-Parra) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/yael-parra/) |
+| **Maryna Nalyvaiko** | [![GitHub](https://img.shields.io/badge/GitHub-f56a79?logo=github&logoColor=white)](https://github.com/Yael-Parra) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/yael-parra/) |
+
+
