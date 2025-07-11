@@ -35,12 +35,7 @@ def _create_comment_from_error(video_id: str, row: pd.Series) -> Comment:
         sentiment_type=row.get("sentiment_type", "neutral"),
         sentiment_score=row.get("sentiment_score", 0.0),
         sentiment_intensity=row.get("sentiment_intensity", "weak"), 
-        is_self_promotional=row.get("is_self_promotional", False),
-        has_url=row.get("has_url", False),
-        has_tag=row.get("has_tag", False),
-        like_count_comment=row.get("like_count_comment", 0),
-        reply_count=row.get("reply_count", 0),
-        author=row.get("author", "unknown"),
+        total_likes_comment=row.get("like_count_comment", 0),
     )
 
 def _calculate_toxicity_stats(comments: List[Comment]) -> Dict[str, PredictionStats]:
@@ -74,41 +69,38 @@ def _calculate_sentiment_stats(comments: List[Comment]) -> Dict[str, Any]:
         stype = c.sentiment_type or "neutral"
         sentiment_counts[stype] = sentiment_counts.get(stype, 0) + 1
     
-    intensity_counts = {}
-    for c in comments:
-        intensity = c.sentiment_intensity or "weak"
-        intensity_counts[intensity] = intensity_counts.get(intensity, 0) + 1
 
     return {
         "mean_sentiment_score": mean_sentiment_score,
         "sentiment_types_distribution": sentiment_counts,
-        "sentiment_intensity_distribution": intensity_counts 
     }
 
-
-def _calculate_engagement_stats(comments: List[Comment]) -> Dict[str, Any]:
-
+def _calculate_basic_stats(comments: List[Comment]) -> Dict[str, Any]:
+    """
+    Calcula estadísticas básicas que van directamente a la tabla video_statistics
+    """
     total_comments = len(comments)
     
-    # ✅ USAR ATRIBUTOS DE OBJETOS COMMENT
-    comments_with_urls = sum(1 for c in comments if c.has_url)
-    comments_with_tags = sum(1 for c in comments if c.has_tag)
-    mean_likes = sum(c.like_count_comment or 0 for c in comments) / total_comments if total_comments else 0
-    max_likes = max((c.like_count_comment or 0 for c in comments), default=0)
+    # Likes
+    total_likes = sum(c.total_likes_comment or 0 for c in comments)
+    mean_likes = total_likes / total_comments if total_comments else 0
+    max_likes = max((c.total_likes_comment or 0 for c in comments), default=0)
     
-    # Porcentaje de comentarios con algún tag de toxicidad
+    # Self promotion
+    # self_promotion = sum(1 for c in comments if c.is_self_promotional)
+    
+    # Toxicity percentage
     tagged_comments = sum(1 for c in comments 
                          if any(getattr(c, f"is_{field}", False) for field in TOXICITY_FIELDS))
-    porcentaje_tagged = (tagged_comments / total_comments * 100) if total_comments else 0
+    percentage_tagged = (tagged_comments / total_comments * 100) if total_comments else 0
     
     return {
-        "comments_with_urls": comments_with_urls,
-        "comments_with_tags": comments_with_tags,
-        "url_percentage": (comments_with_urls / total_comments * 100) if total_comments else 0,
-        "tag_percentage": (comments_with_tags / total_comments * 100) if total_comments else 0,
+        "total_comments": total_comments,
+        "total_likes": total_likes,
         "mean_likes": mean_likes,
         "max_likes": max_likes,
-        "porcentaje_tagged": porcentaje_tagged
+        # "self_promotion": self_promotion,
+        "percentage_tagged": percentage_tagged
     }
 
 #Vamos a poner el orden del pipeline para las predicciones: 
@@ -122,7 +114,9 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
             video_id=video_id,
             total_comments=0,
             stats={},
+            complete_stats={},
             comments=[]
+            
         )
     
     # 2. Guardar en DataFrame EN MEMORIA 
@@ -131,10 +125,15 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
     # 3. Función de limpieza
     df_clean = clean_youtube_data(df)
 
+    print(f"🔍 Columnas después de cleaning: {df_clean.columns.tolist()}")
+    print(f"🔍 Sample like_count_comment: {df_clean['like_count_comment'].head().tolist()}")
+    print(f"🔍 Total likes en DataFrame: {df_clean['like_count_comment'].sum()}")
     # 4. Verificar que el modelo esté cargado
     if not model_loader:
         raise Exception("Modelo MULTITOXIC no disponible")
-
+    
+    self_promotional_count = df_clean['is_self_promotional'].sum() if 'is_self_promotional' in df_clean.columns else 0
+    
     # 5. Predicción fila por fila del DataFrame
     enriched_comments: List[Comment] = []        
     for _, row in df_clean.iterrows():  
@@ -162,13 +161,7 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
                 sentiment_type=row.get("sentiment_type"),
                 sentiment_score=row.get("sentiment_score"),
                 sentiment_intensity=row.get("sentiment_intensity"), 
-                # Campos adicionales
-                is_self_promotional=row.get("is_self_promotional"),
-                has_url=row.get("has_url"),
-                has_tag=row.get("has_tag"),
-                like_count_comment=row.get("like_count_comment"),
-                reply_count=row.get("reply_count"),
-                author=row.get("author"),
+                total_likes_comment=row.get("like_count_comment", 0),
             )
             enriched_comments.append(comment_obj)
 
@@ -181,28 +174,29 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
     # 6. Calcular estadísticas desde los comentarios enriquecidos
     toxicity_stats = _calculate_toxicity_stats(enriched_comments)
     sentiment_stats = _calculate_sentiment_stats(enriched_comments)
-    engagement_stats = _calculate_engagement_stats(enriched_comments)
-    
+    basic_stats = _calculate_basic_stats(enriched_comments)
     stats_dict = {k: {"count": v.count, "percentage": v.percentage} 
                   for k, v in toxicity_stats.items()}
 
 
     complete_stats = {
-        "cantidad_comentarios": len(enriched_comments),
-        "barras_toxicidad": {
+        # Campos directos para video_statistics
+        "total_comments": basic_stats["total_comments"],
+        "mean_likes": basic_stats["mean_likes"],
+        "max_likes": basic_stats["max_likes"],
+        "total_likes": basic_stats["total_likes"],
+        "self_promotional": int(self_promotional_count), 
+        "percentage_tagged": basic_stats["percentage_tagged"],
+        
+        # Campos JSON para video_statistics
+        "sentiment_distribution": sentiment_stats["sentiment_types_distribution"],
+        "toxicity_stats": {
             f"is_{field}": {
                 "true": toxicity_stats[f"is_{field}"].count, 
                 "false": len(enriched_comments) - toxicity_stats[f"is_{field}"].count
             } for field in TOXICITY_FIELDS
         },
-        "sentimientos": sentiment_stats,
-        "porcentaje_tagged": engagement_stats["porcentaje_tagged"],
-        "mean_likes": engagement_stats["mean_likes"],
-        "max_likes": engagement_stats["max_likes"],
-        "engagement_stats": {
-            k: v for k, v in engagement_stats.items() 
-            if k not in ["mean_likes", "max_likes", "porcentaje_tagged"]
-        }
+        "mean_sentiment_score": sentiment_stats["mean_sentiment_score"],
     }
 
     
