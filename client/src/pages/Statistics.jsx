@@ -20,9 +20,12 @@ import {
 // Importar componentes
 import ToxicityDistribution from '../components/charts/global/ToxicityDistribution';
 import VideoHeatmap from '../components/charts/global/VideoHeatmap';
+import EngagementComparison from '../components/charts/global/EngagementComparison';
 import { GlobalMetricCards, SpecificMetricCards } from '../components/charts/global/MetricCards';
 import ToxicityRadar from '../components/charts/video/ToxicityRadar';
 import SentimentPie from '../components/charts/video/SentimentPie';
+import CorrelationScatter from '../components/charts/video/CorrelationScatter';
+import SarcasmDetector from '../components/charts/video/SarcasmDetector';
 import RiskAssessment from '../components/charts/video/RiskAssessment';
 
 const Statistics = () => {
@@ -114,27 +117,27 @@ const Statistics = () => {
       <div className="container px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-4 text-3xl font-bold text-slate-800">
-            Toxicity Analysis Dashboard
+          <h1 className="mb-8 text-3xl font-bold text-slate-800">
+            Toxicity Statistics
           </h1>
           
           {/* Vista Toggle */}
           <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={() => {
-                setActiveView('global');
-                setSelectedVideoId('');
-                window.history.pushState({}, '', '/statistics');
-              }}
-              className={`px-6 py-2 rounded-full font-semibold text-lg transition-all duration-200 cursor-pointer ${
-                activeView === 'global'
-                  ? 'bg-red-500 text-white shadow-lg border-2 border-red-500'
-                  : 'border-2 border-slate-300 text-slate-700 bg-slate-100/60 hover:bg-red-50/70 hover:text-red-600 hover:border-red-300/60'
-              }`}
-              style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
-            >
-              Global Analysis
-            </button>
+          <button
+            onClick={() => {
+              setActiveView('global');
+              setSelectedVideoId('');
+              window.history.pushState({}, '', '/statistics');
+            }}
+            className={`px-6 py-2 rounded-full font-semibold text-lg transition-all duration-200 cursor-pointer ${
+              activeView === 'global'
+                ? 'bg-red-500 text-white shadow-lg border-2 border-red-500'
+                : 'border-2 border-slate-300 text-slate-700 bg-slate-100/60 hover:bg-red-50/70 hover:text-red-600 hover:border-red-300/60'
+            }`}
+            style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
+          >
+            Global Statistics
+          </button>
             
             {/* Selector de video directo */}
             <select
@@ -142,7 +145,7 @@ const Statistics = () => {
               onChange={(e) => handleVideoSelect(e.target.value)}
               className="px-4 py-3 bg-white border rounded-lg cursor-pointer border-slate-300 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 min-w-80"
             >
-              {!selectedVideoId && <option value="">Select video to analyze...</option>}
+              {!selectedVideoId && <option value="">Statistics by video...</option>}
               
               {allVideoStats.map(videoItem => (
                 <option key={videoItem.video_id} value={videoItem.video_id}>
@@ -173,6 +176,9 @@ const Statistics = () => {
                 allVideoStats={allVideoStats}
                 onVideoSelect={handleVideoSelect}
               />
+              
+              {/* Engagement vs toxicidad */}
+              <EngagementComparison allComments={allComments} />
             </div>
           </>
         )}
@@ -187,21 +193,23 @@ const Statistics = () => {
             />
 
             {/* Gráficos específicos del video */}
-            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
-              {/* Radar Chart - Perfil completo de toxicidad */}
-              <ToxicityRadar specificVideoComments={specificVideoComments} />
-              
-              {/* Pie Chart - Sentimientos (contexto) */}
-              <SentimentPie specificVideoComments={specificVideoComments} />
-            </div>
+          <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+            {/* Radar Chart - Perfil completo de toxicidad */}
+            <ToxicityRadar specificVideoComments={specificVideoComments} />
             
-            {/* Evaluación de riesgo */}
+            {/* Pie Chart - Sentimientos (contexto) */}
+            <SentimentPie specificVideoComments={specificVideoComments} />
+            
+            {/* Scatter Plot - Correlación sentiment vs toxicity */}
+            <CorrelationScatter specificVideoComments={specificVideoComments} />
+            
+            {/* Detector de sarcasmo */}
+            <SarcasmDetector specificVideoComments={specificVideoComments} />
+          </div>
+            {/* Evaluación de riesgo - AGREGAR AQUÍ */}
             <RiskAssessment specificVideoComments={specificVideoComments} />
-            
           </>
         )}
-
-
       </div>
     </div>
   );

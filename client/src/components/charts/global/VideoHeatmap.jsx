@@ -78,7 +78,7 @@ const VideoHeatmap = ({ allComments, allVideoStats, onVideoSelect }) => {
                   onClick={() => onVideoSelect(videoItem.video_id)}
                   className="px-3 py-1 text-sm text-red-500 rounded hover:text-red-700 hover:bg-red-50"
                 >
-                  Analyze
+                  Statistics
                 </button>
               </div>
             </div>
