@@ -145,25 +145,25 @@ def convert_data_types(df):
     
     return df_copy
 # ----------------------------------------------------------------
-# URL handling functions
-def extract_and_remove_urls(df, text_column='text'):
-    """
-    1. Extracts URLs to new column 'extracted_urls' (as lists)
-    2. Removes URLs from original text column
-    3. Adds 'has_url' boolean flag
-    """
-    df = df.copy()
+# # URL handling functions
+# def extract_and_remove_urls(df, text_column='text'):
+#     """
+#     1. Extracts URLs to new column 'extracted_urls' (as lists)
+#     2. Removes URLs from original text column
+#     3. Adds 'has_url' boolean flag
+#     """
+#     df = df.copy()
     
-    # Extract URLs (store as list)
-    df['extracted_urls'] = df[text_column].apply(lambda x: re.findall(r'https?://\S+|www\.\S+', str(x)))
+#     # Extract URLs (store as list)
+#     df['extracted_urls'] = df[text_column].apply(lambda x: re.findall(r'https?://\S+|www\.\S+', str(x)))
     
-    # Remove URLs from text (keep everything else)
-    df[text_column] = df[text_column].apply(lambda x: re.sub(r'https?://\S+|www\.\S+', '', str(x)))
+#     # Remove URLs from text (keep everything else)
+#     df[text_column] = df[text_column].apply(lambda x: re.sub(r'https?://\S+|www\.\S+', '', str(x)))
     
-    # Add simple boolean flag
-    df['has_url'] = df['extracted_urls'].apply(lambda x: len(x) > 0)
+#     # Add simple boolean flag
+#     df['has_url'] = df['extracted_urls'].apply(lambda x: len(x) > 0)
     
-    return df
+#     return df
 
 # ----------------------------------------------------------------
 # Self-promotion detection
@@ -257,13 +257,13 @@ def detect_tags(df, text_column='text'):
             return False
         return bool(re.search(r'@\w+', text))
     
-    def remove_tags(text):
-        if not isinstance(text, str):
-            return text
-        return re.sub(r'@\w+', '', text).strip()
+    # def remove_tags(text):
+    #     if not isinstance(text, str):
+    #         return text
+    #     return re.sub(r'@\w+', '', text).strip()
     
     df['has_tag'] = df[text_column].apply(has_tag)
-    df[text_column] = df[text_column].apply(remove_tags)
+    # df[text_column] = df[text_column].apply(remove_tags)
     
     return df
 # ----------------------------------------------------------------
@@ -333,7 +333,7 @@ def clean_youtube_data(df):
 # Step 4  convert_data_types
     df = convert_data_types(df)
 # Step 5  extract_and_remove_urls
-    df = extract_and_remove_urls(df)
+   # df = extract_and_remove_urls(df)
 # Step 6  is_self_promotional
     df['is_self_promotional'] = df['text'].apply(is_self_promotional)
 # Step 7  detect_tags
