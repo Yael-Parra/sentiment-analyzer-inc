@@ -8,42 +8,72 @@ from etl.youtube_extraction import fetch_comment_threads
 import server.database.connection_db as connection_db
 import server.database.save_comments as save_comments
 from server.database import save_comments
-from server.outils.pipeline_prediction import predict_pipeline 
-from server.database.save_comments import save_comment,save_comments_batch,get_comments_by_video,delete_comments_by_video
+from server.outils.prediction_pipeline import predict_pipeline
+from server.schemas import PredictionResponse
+from server.database.save_comments import save_comment,save_comments_batch,get_comments_by_video,delete_comments_by_video, save_video_statistics
 from server.outils.pipeline_cleaning import clean_youtube_data, analyze_sentiment
-# ==============================  Cleaning Pipeline  ==============================
-def test_pipeline():
-    print("🚀 Iniciando pruebas del Pipeline Unificado...")
-    pipeline = UnifiedPipeline
-    
-    # Datos de prueba COMPLETOS que simulan la salida real de clean_youtube_data
-    test_data = {
-        "text": ["Great video!", "Bad content"],
-        "sentiment_type": ["positive", "negative"],  # Columnas requeridas
-        "sentiment_intensity": ["strong", "moderate"],
-        "published_at_comment": pd.to_datetime(["2024-01-01 12:00", "2024-01-01 18:00"]),
-        "is_self_promotional": [False, False]
-    }
-    
-    # Convertir a DataFrame
-    df_clean = pd.DataFrame(test_data)
-    
-    print("\n🧪 Probando _enrich_comments() con datos COMPLETOS")
-    enriched = pipeline._enrich_comments(df_clean, "test_video")
-    
-    if not enriched:
-        print("❌ Falla - Lista vacía")
-        return False
-    
-    print(f"✅ Comentarios enriquecidos: {len(enriched)}")
-    print("Muestra:", enriched[0])
-    
-    # Prueba de stats
-    print("\n🧪 Probando _calculate_stats()")
-    stats = pipeline._calculate_stats(enriched)
-    print("Estadísticas generadas:", stats.keys())
-    
-    return True
+# ==============================   Pipeline  ====================================
+import pandas as pd
+from server.schemas import PredictionResponse
+from server.outils.prediction_pipeline import predict_pipeline, TOXICITY_FIELDS
+import server.outils.prediction_pipeline as pipeline
+
+def test_predict_pipeline_basic_case(monkeypatch):
+    # Mock extract_video_id
+    monkeypatch.setattr(pipeline, "extract_video_id", lambda url: "mock_video_id")
+
+    # Mock fetch_comment_threads
+    monkeypatch.setattr(pipeline, "fetch_comment_threads", lambda video_id, max_total=100: [{
+        "text": "This is a test comment",
+        "like_count_comment": 5,
+        "reply_count": 0,
+        "author": "test_user"
+    }])
+
+    # Mock clean_youtube_data
+    monkeypatch.setattr(pipeline, "clean_youtube_data", lambda df: pd.DataFrame([{
+        "text": "This is a test comment",
+        "sentiment_type": "neutral",
+        "sentiment_score": 0.0,
+        "sentiment_intensity": "weak",
+        "is_self_promotional": False,
+        "has_url": False,
+        "has_tag": False,
+        "like_count_comment": 5,
+        "reply_count": 0,
+        "author": "test_user"
+    }]))
+
+    # Mock model_loader
+    class FakeModelLoader:
+        def predict(self, text, return_probabilities=True, return_categories=False):
+            return {
+                "probabilities": {field: 0.0 for field in TOXICITY_FIELDS} | {"toxic": 0.8, "abusive": 0.1},
+                "detected_types": ["toxic"]
+            }
+
+    monkeypatch.setattr(pipeline, "model_loader", FakeModelLoader())
+
+    # Mock save_comments_batch
+    monkeypatch.setattr(pipeline, "save_comments_batch", lambda comments: comments)
+
+    # Mock save_video_statistics
+    monkeypatch.setattr(pipeline, "save_video_statistics", lambda video_id, stats: stats)
+
+    # Ejecutar pipeline
+    result = predict_pipeline("https://youtu.be/mock")
+
+    assert isinstance(result, PredictionResponse)
+    assert result.video_id == "mock_video_id"
+    assert result.total_comments == 1
+    assert result.stats["is_toxic"].count == 1
+    assert result.stats["is_abusive"].count == 0
+
+    comment = result.comments[0]
+    assert comment.text == "This is a test comment"
+    assert comment.is_toxic is True
+    assert comment.is_abusive is False
+    assert comment.sentiment_type == "neutral"
 
 # =============================  YouTube Extraction  =============================
 @patch("etl.youtube_extraction.requests.get")
