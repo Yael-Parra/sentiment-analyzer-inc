@@ -88,8 +88,6 @@ def get_all_video_statistics():
                     parsed_stat["sentiment_distribution"] = json.loads(parsed_stat["sentiment_distribution"])
                 if parsed_stat.get("toxicity_stats"):
                     parsed_stat["toxicity_stats"] = json.loads(parsed_stat["toxicity_stats"])
-                if parsed_stat.get("engagement_stats"):
-                    parsed_stat["engagement_stats"] = json.loads(parsed_stat["engagement_stats"])
                 
                 parsed_stats.append(parsed_stat)
             
@@ -169,10 +167,9 @@ def get_stats(video_id: str):
                     "mean_sentiment_score": saved_stats["mean_sentiment_score"],
                     "sentiment_types_distribution": saved_stats["sentiment_distribution"]
                 },
-                "porcentaje_tagged": saved_stats["porcentaje_tagged"],
+                "percentage_toxicity": saved_stats["percentage_toxicity"],
                 "mean_likes": saved_stats["mean_likes"],
                 "max_likes": saved_stats["max_likes"],
-                "engagement_stats": saved_stats["engagement_stats"],
                 "source": "database"
             }
         else:
