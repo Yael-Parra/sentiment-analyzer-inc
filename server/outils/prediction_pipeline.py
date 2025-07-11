@@ -228,6 +228,7 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
         video_id=video_id,
         total_comments=len(enriched_comments),
         stats=stats_dict,
+        complete_stats=complete_stats,
         comments=enriched_comments  
     )
 
