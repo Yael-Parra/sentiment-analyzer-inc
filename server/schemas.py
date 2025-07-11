@@ -71,6 +71,7 @@ class PredictionResponse(BaseModel):
     video_id: str
     total_comments: int
     stats: Dict[str, Any]
+    complete_stats: Dict[str, Any] 
     comments: List[Comment]
 
 class SavedStatisticsResponse(BaseModel):
