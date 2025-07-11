@@ -98,13 +98,14 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
     print(f"\n🎯 Total final de comentarios extraídos: {total}")
     return comments
 
-url_or_id = input("Introduce URL o ID de vídeo YouTube: ").strip()
-video_id = extract_video_id(url_or_id)
+if __name__ == "__main__":
+    url_or_id = input("Introduce URL o ID de vídeo YouTube: ").strip()
+    video_id = extract_video_id(url_or_id)
 
-print("Extrayendo comentarios y respuestas...")
-comments = fetch_comment_threads(video_id, max_total=100000)
-print(f"{len(comments)} comentarios y respuestas extraídos.")
+    print("Extrayendo comentarios y respuestas...")
+    comments = fetch_comment_threads(video_id, max_total=100000)
+    print(f"{len(comments)} comentarios y respuestas extraídos.")
 
-df = pd.DataFrame(comments)
-print("Primeros comentarios extraídos:")
-print(df.head())
+    df = pd.DataFrame(comments)
+    print("Primeros comentarios extraídos:")
+    print(df.head())
