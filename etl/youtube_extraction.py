@@ -60,7 +60,7 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
                 "parentCommentId": None,
                 "publishedAtComment": top.get("publishedAt"),
                 "text": top.get("textDisplay"),
-                "likeCountComment": top.get("likeCount"),
+                "like_count_comment": top.get("likeCount"),
                 "replyCount": s.get("totalReplyCount")
             })
             total += 1
@@ -77,7 +77,7 @@ def fetch_comment_threads(video_id, max_total=100000, delay=1):
                     "parentCommentId": rps.get("parentId"),
                     "publishedAtComment": rps.get("publishedAt"),
                     "text": rps.get("textDisplay"),
-                    "likeCountComment": rps.get("likeCount"),
+                    "like_count_comment": rps.get("likeCount"),
                     "replyCount": None
                 })
                 total += 1
