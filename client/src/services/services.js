@@ -15,6 +15,10 @@ const normalizeComments = (comments) => {
   return comments.map(normalizeComment);
 };
 
+// ========================================
+// VIDEO ANALYSIS SERVICES
+// ========================================
+
 // Analyze YouTube video
 export const analyzeYouTubeVideo = async (videoUrl, maxComments = 100) => {
     try {
@@ -35,7 +39,46 @@ export const analyzeYouTubeVideo = async (videoUrl, maxComments = 100) => {
     }
 };
 
-// Get video statistics
+// ========================================
+// SENTIMENT ANALYZER SERVICES
+// ========================================
+
+// Get all sentiment analyzer data
+export const getSentimentAnalyzerAll = async () => {
+    try {
+        const response = await axios.get(`${API_URL}/sentiment-analyzer/all`);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Error getting all sentiment analyzer data:', error.message);
+        throw new Error(`Error while obtaining all sentiment data: ${error.response?.data?.detail || error.message}`);
+    }
+};
+
+// Get sentiment analyzer data by video ID
+export const getSentimentAnalyzerByVideo = async (videoId) => {
+    if (!videoId) {
+        throw new Error("Se requiere el ID del video para obtener datos de sentiment analyzer");
+    }
+    
+    try {
+        // Convertir videoId (camelCase) a video_id (snake_case) para el endpoint
+        const response = await axios.get(`${API_URL}/sentiment-analyzer/video/${videoId}`);
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.detail || 
+                          (error.response?.status === 404 ? 
+                           `No se encontraron comentarios para el video ${videoId}` : 
+                           error.message);
+        console.error('❌ Error getting sentiment analyzer data by video:', errorMessage);
+        throw new Error(`Error while obtaining sentiment data: ${errorMessage}`);
+    }
+};
+
+// ========================================
+// VIDEO STATISTICS SERVICES
+// ========================================
+
+// Get video statistics (tu versión original)
 export async function getVideoStatistics(videoId) {
   try {
     const res = await fetch(`http://localhost:5000/statistics/${videoId}`);
@@ -52,7 +95,41 @@ export async function getVideoStatistics(videoId) {
     console.error("getVideoStatistics error:", err);
     return null;
   }
+}
+
+// Get all video statistics (nuevo servicio de tu amigo)
+export const getVideoStatisticsAll = async () => {
+    try {
+        const response = await axios.get(`${API_URL}/video-statistics/all`);
+        return response.data;
+    } catch (error) {
+        console.error('❌ Error getting all video statistics:', error.message);
+        throw new Error(`Error while obtaining all video statistics: ${error.response?.data?.detail || error.message}`);
+    }
 };
+
+// Get video statistics by video ID (nuevo servicio de tu amigo)
+export const getVideoStatisticsById = async (videoId) => {
+    if (!videoId) {
+        throw new Error("Se requiere el ID del video para obtener estadísticas");
+    }
+    
+    try {
+        const response = await axios.get(`${API_URL}/video-statistics/video/${videoId}`);
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.detail || 
+                          (error.response?.status === 404 ? 
+                           `No se encontraron estadísticas para el video ${videoId}` : 
+                           error.message);
+        console.error('❌ Error getting video statistics by ID:', errorMessage);
+        throw new Error(`Error while obtaining video statistics: ${errorMessage}`);
+    }
+};
+
+// ========================================
+// COMMENTS SERVICES
+// ========================================
 
 // Función para obtener comentarios del video
 export const getCommentsByVideo = async (videoId) => {
@@ -96,6 +173,10 @@ export const deleteSavedComments = async (videoId) => {
     }
 };
 
+// ========================================
+// SERVER HEALTH SERVICES
+// ========================================
+
 // Server health check
 export const checkServerHealth = async () => {
     try {
@@ -106,6 +187,35 @@ export const checkServerHealth = async () => {
         throw new Error(`Servidor not avilable: ${error.message}`);
     }
 };
+
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
+// Extract video ID
+export const extractVideoIdFromUrl = (url) => {
+  // Match "v=" o "/" seguido de 11 caracteres válidos para un ID de YouTube
+  const pattern = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
+  const match = url.match(pattern);
+  if (match && match[1]) {
+    return match[1];
+  }
+  // Si no se encuentra nada, asume que la entrada es un ID directo
+  return url;
+};
+
+// Validate YouTube URL or ID
+export const isValidYouTubeUrl = (url) => {
+    const patterns = [
+        /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-Z_-]{11}/,
+        /^[a-zA-Z0-9_-]{11}$/
+    ];
+    return patterns.some(pattern => pattern.test(url));
+};
+
+// ========================================
+// DATA FORMATTING & ANALYSIS FUNCTIONS
+// ========================================
 
 // Toxicity chart data
 export const formatToxicityDataForCharts = (toxicityStats = {}) => {
@@ -133,6 +243,7 @@ export const calculateEngagementMetrics = (comments = []) => {
   };
 };
 
+// Toxicity colors configuration
 const TOXICITY_COLORS = {
     'is_toxic': '#FF6B6B',
     'is_hatespeech': '#FF4757',
@@ -164,6 +275,7 @@ export const formatSentimentDataForCharts = (sentimentAnalysis) => {
     }));
 };
 
+// Sentiment colors configuration
 const SENTIMENT_COLORS = {
     'positive': '#00B894',
     'negative': '#E17055',
@@ -171,6 +283,10 @@ const SENTIMENT_COLORS = {
 };
 
 const getSentimentColor = (sentiment) => SENTIMENT_COLORS[sentiment.toLowerCase()] || '#DDD';
+
+// ========================================
+// COMMENT FILTERING & ANALYSIS
+// ========================================
 
 // Filter comments (con normalización)
 export const filterComments = (comments, filters) => {
@@ -205,25 +321,6 @@ export const getTopToxicComments = (comments, limit = 5) => {
         .filter(comment => comment.toxic_probability > 0)
         .sort((a, b) => b.toxic_probability - a.toxic_probability)
         .slice(0, limit);
-};
-
-// Extract video ID
-export const extractVideoIdFromUrl = (url) => {
-  const pattern = /(?:v=|\/)([0-9A-Za-z_-]{11})/;
-  const match = url.match(pattern);
-  if (match && match[1]) {
-    return match[1];
-  }
-  return url;
-};
-
-// Validate YouTube URL or ID
-export const isValidYouTubeUrl = (url) => {
-    const patterns = [
-        /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}/,
-        /^[a-zA-Z0-9_-]{11}$/
-    ];
-    return patterns.some(pattern => pattern.test(url));
 };
 
 // Detect sarcastic toxic comments (con normalización)
@@ -286,6 +383,7 @@ export const getToxicityEngagementScatterData = (comments) => {
         }));
 };
 
+// Strategic insights
 export const getStrategicInsights = (stats) => ({
     sarcasmWarning: stats.sarcasm_ratio > 0.2 ? "⚠️ High sarcasm" : "✅",
     bestTimeToPost: stats.optimal_posting_time,

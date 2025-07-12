@@ -1,256 +1,210 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  getVideoStatistics,
-  getCommentsByVideo,
-  formatToxicityDataForCharts,
-  formatSentimentDataForCharts} 
-from '../services/services';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line
-} from 'recharts';
-import {
-  MessageCircle, AlertTriangle, Heart, Shield, Activity
+  getSentimentAnalyzerAll,
+  getSentimentAnalyzerByVideo,
+  getVideoStatisticsAll,
+  getVideoStatisticsById
+} from '../services/services';
+import { 
+  Shield, 
+  AlertTriangle, 
+  MessageSquare, 
+  Activity,
+  Target,
+  TrendingUp,
+  Users,
+  Eye,
+  BarChart3
 } from 'lucide-react';
 
-const StatisticsSelector = () => {
-  const [videoId, setVideoId] = useState('');
-  const navigate = useNavigate();
+// Importar componentes
+import ToxicityDistribution from '../components/charts/global/ToxicityDistribution';
+import VideoHeatmap from '../components/charts/global/VideoHeatmap';
+import { GlobalMetricCards, SpecificMetricCards } from '../components/charts/global/MetricCards';
+import ToxicityRadar from '../components/charts/video/ToxicityRadar';
+import SentimentPie from '../components/charts/video/SentimentPie';
+import RiskAssessment from '../components/charts/video/RiskAssessment';
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (videoId.trim()) {
-      navigate(`/statistics/${videoId.trim()}`);
-    }
-  };
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-center mt-10">
-      <label className="mb-2">Introduce el ID del video:</label>
-      <input
-        className="border px-2 py-1 mb-2"
-        value={videoId}
-        onChange={e => setVideoId(e.target.value)}
-        placeholder="ID del video"
-      />
-      <button
-        type="submit"
-        className="bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        Ver estadísticas
-      </button>
-    </form>
-  );
-};
 const Statistics = () => {
-  const { videoId } = useParams();
-  const [stats, setStats] = useState(null);
-  const [comments, setComments] = useState([]);
+  // Extraer correctamesnte el videoId de la URL
+  const urlPath = window.location.pathname;
+  const pathParts = urlPath.split('/').filter(part => part !== '');
+  const videoIdFromUrl = pathParts.length > 1 && pathParts[0] === 'statistics' && pathParts[1] !== '' ? pathParts[1] : null;
+  
+  // Estados principales
+  const [allComments, setAllComments] = useState([]);
+  const [allVideoStats, setAllVideoStats] = useState([]);
+  const [specificVideoComments, setSpecificVideoComments] = useState([]);
+  const [specificVideoStats, setSpecificVideoStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const reportRef = useRef();
+  const [activeView, setActiveView] = useState(videoIdFromUrl ? 'specific' : 'global');
+  const [selectedVideoId, setSelectedVideoId] = useState(videoIdFromUrl || '');
 
+  // Cargar datos
   useEffect(() => {
-  const fetchData = async () => {
-    console.log("Componente montado, videoId:", videoId);
-    if (!videoId) {
-      setError("No se proporcionó un ID de video en la URL.");
-      setLoading(false);
-      return;
-    }
-    try {
-      const [statsData, commentsData] = await Promise.all([
-        getVideoStatistics(videoId),
-        getCommentsByVideo(videoId)
-      ]);
-      console.log("Datos recibidos:", { statsData, commentsData });
-
-      if (!statsData) {
-        throw new Error("No se recibieron estadísticas del video.");
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        if (activeView === 'global') {
+          console.log('🔄 Cargando datos globales...');
+          const [commentsResponse, statsResponse] = await Promise.all([
+            getSentimentAnalyzerAll(),
+            getVideoStatisticsAll()
+          ]);
+          
+          setAllComments(commentsResponse.comments || []);
+          setAllVideoStats(statsResponse.video_statistics || []);
+          console.log('✅ Datos globales cargados');
+          
+        } else if (selectedVideoId) {
+          console.log('🔄 Cargando datos para video:', selectedVideoId);
+          const [commentsResponse, statsResponse] = await Promise.all([
+            getSentimentAnalyzerByVideo(selectedVideoId),
+            getVideoStatisticsById(selectedVideoId)
+          ]);
+          
+          setSpecificVideoComments(commentsResponse.comments || []);
+          setSpecificVideoStats(statsResponse.statistics || null);
+          console.log('✅ Datos del video cargados');
+        }
+      } catch (err) {
+        console.error('❌ Error cargando datos:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      if (!commentsData) {
-        throw new Error("No se recibieron comentarios del video.");
-      }
+    };
 
-      setStats(statsData);
-      setComments(commentsData);
-    } catch (err) {
-      console.error("Error al cargar datos:", err);
-      setError(err.message || "Error desconocido");
-    } finally {
-      setLoading(false);
-    }
+    loadData();
+  }, [activeView, selectedVideoId]);
+
+  const handleVideoSelect = (videoId) => {
+    setSelectedVideoId(videoId);
+    setActiveView('specific');
+    window.history.pushState({}, '', `/statistics/${videoId}`);
   };
 
-  fetchData();
-}, [videoId]);
-  // Renderizado condicional mejorado
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p>Cargando estadísticas para el video {videoId}...</p>
+  if (loading) return (
+    <div className="h-full min-h-screen pt-24 bg-slate-50">
+      <div className="container px-4 mx-auto">
+        <div className="flex items-center justify-center py-20">
+          <div className="text-lg text-slate-600">Loading statistics...</div>
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="max-w-md mx-auto bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-        <h3 className="font-bold mb-2">Error</h3>
-        <p>{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-3 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Try again
-        </button>
+  if (error) return (
+    <div className="flex flex-col min-h-screen pt-24 mt-10 mb-10 bg-slate-50">
+      <div className="container px-4 mx-auto">
+        <div className="flex items-center justify-center py-20">
+          <div className="px-4 py-3 text-red-700 bg-red-100 border border-red-400 rounded-lg">
+            Error: {error}
+          </div>
+        </div>
       </div>
-    );
-  }
-
-  if (!stats || !comments.length) {
-    return (
-      <div className="text-center py-20">
-        <p>No se encontraron datos para el video {videoId}</p>
-        <p className="text-sm text-gray-500 mt-2">
-          Verifica que el ID del video sea correcto
-        </p>
-      </div>
-    );
-  }
-
-  // Preparación de datos para gráficos
-  const toxicityData = formatToxicityDataForCharts(stats.toxicity_stats);
-  const sentimentData = formatSentimentDataForCharts(stats.sentiment_distribution);
-  const toxicityOverTime = comments
-    .filter(c => c.published_at)
-    .sort((a, b) => new Date(a.published_at) - new Date(b.published_at))
-    .map(comment => ({
-      date: new Date(comment.published_at).toLocaleDateString(),
-      toxicity: Math.round((comment.toxic_probability || 0) * 100)
-    }));
+    </div>
+  );
 
   return (
-    <div ref={reportRef} className="container mx-auto px-4 py-8">
-      {/* Contenido principal */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-bold mb-6">
-          Estadísticas del Video: {videoId}
-        </h1>
-        
-        {/* Sección de métricas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <MetricCard 
-            icon={<MessageCircle size={24} className="text-blue-500" />}
-            title="Comentarios"
-            value={stats.total_comments}
-          />
-          <MetricCard 
-            icon={<AlertTriangle size={24} className="text-red-500" />}
-            title="Toxicidad"
-            value={`${Math.round((stats.toxicity_stats?.average_toxicity || 0) * 100)}%`}
-          />
-          <MetricCard 
-            icon={<Heart size={24} className="text-pink-500" />}
-            title="Likes promedio"
-            value={
-              comments.length > 0
-                ? (comments.reduce((acc, c) => acc + (c.like_count || 0), 0) / comments.length).toFixed(1)
-                : '0.0'
-            }
-/>
-          <MetricCard 
-            icon={<Shield size={24} className="text-purple-500" />}
-            title="Sentimiento"
-            value={stats.sentiment_distribution?.dominant_sentiment?.toUpperCase() || 'NEUTRAL'}
-          />
+    <div className="h-full pt-24 mt-10 mb-10 bg-slate-50">
+      <div className="container px-4 mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="mb-4 text-3xl font-bold text-slate-800">
+            Toxicity Analysis Dashboard
+          </h1>
+          
+          {/* Vista Toggle */}
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => {
+                setActiveView('global');
+                setSelectedVideoId('');
+                window.history.pushState({}, '', '/statistics');
+              }}
+              className={`px-6 py-2 rounded-full font-semibold text-lg transition-all duration-200 cursor-pointer ${
+                activeView === 'global'
+                  ? 'bg-red-500 text-white shadow-lg border-2 border-red-500'
+                  : 'border-2 border-slate-300 text-slate-700 bg-slate-100/60 hover:bg-red-50/70 hover:text-red-600 hover:border-red-300/60'
+              }`}
+              style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}
+            >
+              Global Analysis
+            </button>
+            
+            {/* Selector de video directo */}
+            <select
+              value={selectedVideoId}
+              onChange={(e) => handleVideoSelect(e.target.value)}
+              className="px-4 py-3 bg-white border rounded-lg cursor-pointer border-slate-300 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 min-w-80"
+            >
+              {!selectedVideoId && <option value="">Select video to analyze...</option>}
+              
+              {allVideoStats.map(videoItem => (
+                <option key={videoItem.video_id} value={videoItem.video_id}>
+                  Video {videoItem.video_id} ({videoItem.total_comments || 0} comments)
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <ChartContainer title="Distribución de Toxicidad">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={toxicityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="toxic" fill="#ef4444" name="Tóxicos" />
-                <Bar dataKey="nonToxic" fill="#3b82f6" name="No tóxicos" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+        {/* Vista Global */}
+        {activeView === 'global' && (
+          <>
+            {/* Cards de métricas clave */}
+            <GlobalMetricCards 
+              allComments={allComments} 
+              allVideoStats={allVideoStats} 
+            />
 
-          <ChartContainer title="Distribución de Sentimientos">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={sentimentData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {sentimentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={
-                      entry.name === 'positive' ? '#10B981' :
-                      entry.name === 'negative' ? '#EF4444' : '#3B82F6'
-                    } />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </div>
-
-        {/* Toxicidad en el tiempo */}
-        <ChartContainer title="Toxicidad a lo largo del tiempo">
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={toxicityOverTime}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="toxicity" 
-                stroke="#ef4444" 
-                name="Toxicidad (%)"
-                activeDot={{ r: 6 }}
+            {/* Gráficos principales */}
+            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+              {/* Gráfico de distribución de toxicidad */}
+              <ToxicityDistribution allComments={allComments} />
+              
+              {/* Heatmap de videos */}
+              <VideoHeatmap 
+                allComments={allComments} 
+                allVideoStats={allVideoStats}
+                onVideoSelect={handleVideoSelect}
               />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+            </div>
+          </>
+        )}
+
+        {/* Vista específica */}
+        {activeView === 'specific' && selectedVideoId && specificVideoComments.length > 0 && (
+          <>
+            {/* Cards específicos del video */}
+            <SpecificMetricCards 
+              specificVideoComments={specificVideoComments}
+              specificVideoStats={specificVideoStats}
+            />
+
+            {/* Gráficos específicos del video */}
+            <div className="grid grid-cols-1 gap-8 mb-8 xl:grid-cols-2">
+              {/* Radar Chart - Perfil completo de toxicidad */}
+              <ToxicityRadar specificVideoComments={specificVideoComments} />
+              
+              {/* Pie Chart - Sentimientos (contexto) */}
+              <SentimentPie specificVideoComments={specificVideoComments} />
+            </div>
+            
+            {/* Evaluación de riesgo */}
+            <RiskAssessment specificVideoComments={specificVideoComments} />
+            
+          </>
+        )}
+
+
       </div>
     </div>
   );
 };
-
-// Componentes auxiliares
-const MetricCard = ({ icon, title, value }) => (
-  <div className="bg-white border rounded-lg p-4 shadow-sm">
-    <div className="flex items-center gap-3 mb-2">
-      {icon}
-      <h3 className="font-medium text-gray-700">{title}</h3>
-    </div>
-    <p className="text-2xl font-bold">{value}</p>
-  </div>
-);
-
-const ChartContainer = ({ title, children }) => (
-  <div className="bg-white border rounded-lg p-4 shadow-sm">
-    <h2 className="text-lg font-semibold mb-4">{title}</h2>
-    {children}
-  </div>
-);
 
 export default Statistics;
