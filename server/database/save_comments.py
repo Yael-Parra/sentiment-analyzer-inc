@@ -28,7 +28,8 @@ def save_comment(comment_data: Dict[str, Any]) -> Dict[str, Any] | None:
             "is_toxic", "is_hatespeech", "is_abusive", "is_provocative",
             "is_racist", "is_obscene", "is_threat", "is_religious_hate",
             "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism",
-            "sentiment_type", "sentiment_score", "sentiment_intensity"
+            "sentiment_type", "sentiment_score", "sentiment_intensity",
+            "total_likes_comment"
         }
         
         # extraer campos de BD (sin id ni created_at)
@@ -85,7 +86,8 @@ def save_comments_batch(comments_list: List[Dict[str, Any]]) -> List[Dict[str, A
             "is_toxic", "is_hatespeech", "is_abusive", "is_provocative",
             "is_racist", "is_obscene", "is_threat", "is_religious_hate",
             "is_nationalist", "is_sexist", "is_homophobic", "is_radicalism",
-            "sentiment_type", "sentiment_score", "sentiment_intensity"
+            "sentiment_type", "sentiment_score", "sentiment_intensity",
+            "total_likes_comment"
         }
         
         # Prepara datos para inserción en lote
@@ -178,8 +180,9 @@ def test_save_function():
         "is_radicalism": False,
         # Los temporales se filtran automáticamente
         "sentiment_type": "positive",
-        "has_url": False,
-        "author": "TestUser"
+        "sentiment_score": 0.8,
+        "sentiment_intensity": "strong",
+        "total_likes_comment": 1
     }
     
     result = save_comment(test_comment)
@@ -199,7 +202,7 @@ if __name__ == "__main__":      # solo para testear manualmente
 
 
 #  GUARDAR ESTADÍSTICAS DEL VIDEO
-def save_video_statistics(video_id: str, stats_data: Dict[str, Any]) -> Dict[str, Any] | None:
+def save_video_statistics(video_id: str, complete_stats: Dict[str, Any]) -> Dict[str, Any] | None:
     """
     Guarda/actualiza estadísticas (UNA por video_id)
     Resumen de TODOS los comentarios del video
@@ -210,14 +213,15 @@ def save_video_statistics(video_id: str, stats_data: Dict[str, Any]) -> Dict[str
 
         stats_record = {
             "video_id": video_id,
-            "total_comments": stats_data.get("cantidad_comentarios", 0),
-            "porcentaje_tagged": stats_data.get("porcentaje_tagged", 0),
-            "mean_likes": stats_data.get("mean_likes", 0),
-            "max_likes": stats_data.get("max_likes", 0),
-            "mean_sentiment_score": stats_data.get("sentimientos", {}).get("mean_sentiment_score", 0.0),
-            "sentiment_distribution": json.dumps(stats_data.get("sentimientos", {}).get("sentiment_types_distribution", {})),
-            "toxicity_stats": json.dumps(stats_data.get("barras_toxicidad", {})),
-            "engagement_stats": json.dumps(stats_data.get("engagement_stats", {}))
+            "total_comments": complete_stats.get("total_comments", 0),
+            "percentage_toxicity": complete_stats.get("percentage_toxicity", 0.0),
+            "mean_likes": complete_stats.get("mean_likes", 0.0),
+            "max_likes": complete_stats.get("max_likes", 0),
+            "total_likes": complete_stats.get("total_likes", 0),
+            "self_promotional": complete_stats.get("self_promotional", 0),
+            "mean_sentiment_score": complete_stats.get("mean_sentiment_score", 0.0),
+            "sentiment_distribution": json.dumps(complete_stats.get("sentiment_distribution", {})),
+            "toxicity_stats": json.dumps(complete_stats.get("toxicity_stats", {})),
         }
         
         # UPSERT: insertar o actualizar si ya existe
@@ -256,8 +260,6 @@ def get_video_statistics(video_id: str) -> Dict[str, Any] | None:
                 stats["sentiment_distribution"] = json.loads(stats["sentiment_distribution"])
             if stats.get("toxicity_stats"):
                 stats["toxicity_stats"] = json.loads(stats["toxicity_stats"])
-            if stats.get("engagement_stats"):
-                stats["engagement_stats"] = json.loads(stats["engagement_stats"])
             
             print(f"✅ Estadísticas encontradas para video: {video_id}")
             return stats
