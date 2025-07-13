@@ -28,19 +28,24 @@ def handle_duplicates(df):
     """
     Handle duplicate rows in the dataset with multiple strategies:
     1. Remove exact duplicates across all columns
-    2. Ensure each comment_id is unique
-    3. Remove likely duplicates (same author, text, and timestamp)
+    2. Remove duplicate comments with identical text (keeping first occurrence)
+    3. Ensure each comment_id is unique
+    4. Remove likely duplicates (same author, text, and timestamp)
     """
     df_clean = df.copy()
     
-    # First, identify exact duplicates across all columns
+    # 1. Remove exact duplicates across all columns
     df_clean = df_clean.drop_duplicates()
     
-    # Ensure each comment_id is unique
+    # 2. Remove duplicate text (exact matches including spaces/emojis)
+    if 'text' in df_clean.columns:
+        df_clean = df_clean.drop_duplicates(subset=['text'], keep='first')
+    
+    # 3. Ensure each comment_id is unique
     if 'comment_id' in df_clean.columns:
         df_clean = df_clean.drop_duplicates(subset=['comment_id'], keep='first')
     
-    # Remove likely duplicates (same author, text, and timestamp)
+    # 4. Remove likely duplicates (same author, text, and timestamp)
     duplicate_cols = ['author', 'text', 'published_at_comment']
     if all(col in df_clean.columns for col in duplicate_cols):
         df_clean = df_clean.drop_duplicates(subset=duplicate_cols, keep='first')
