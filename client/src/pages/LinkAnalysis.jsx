@@ -47,6 +47,11 @@ const LinkAnalysis = () => {
   const [activeTab, setActiveTab] = useState('input');
   const [maxComments, setMaxComments] = useState(100);
 
+  // Función helper para obtener likes de un comentario
+  const getCommentLikes = (comment) => {
+    return comment?.total_likes_comment || comment?.like_count || comment?.likes || 0;
+  };
+
   // Función para formatear números grandes
   const formatNumber = (num) => {
     if (!num) return '0';
@@ -110,9 +115,9 @@ const LinkAnalysis = () => {
       // Extraer datos de toxicidad desde stats
       const toxicityStats = data.stats || {};
 
-      // Calcular total de likes de comentarios
+      // Calcular total de likes de comentarios - usando helper
       const totalCommentLikes = data.comments ? 
-        data.comments.reduce((sum, c) => sum + (c.total_likes_comment || 0), 0) : 0;
+        data.comments.reduce((sum, c) => sum + getCommentLikes(c), 0) : 0;
 
       // Calcular promedio de likes
       const avgLikes = data.comments && data.comments.length > 0 ?
@@ -121,6 +126,13 @@ const LinkAnalysis = () => {
       console.log("📊 Sentiment calculated:", sentimentDistribution);
       console.log("📊 Toxicity from stats:", toxicityStats);
       console.log("📊 Total comment likes:", totalCommentLikes);
+      console.log("📊 Sample comment with likes:", data.comments?.[0]);
+      console.log("📊 First 3 comments likes:", data.comments?.slice(0, 3).map(c => ({ 
+        text: c.text?.substring(0, 50) + '...', 
+        total_likes_comment: c.total_likes_comment,
+        like_count: c.like_count,
+        allKeys: Object.keys(c)
+      })));
 
       setAnalysisData({
         // Datos principales
@@ -577,7 +589,7 @@ const LinkAnalysis = () => {
                           </span>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Heart size={16} />
-                            <span className="font-medium">{formatNumber(comment.total_likes_comment || 0)} likes</span>
+                            <span className="font-medium">{formatNumber(getCommentLikes(comment))} likes</span>
                           </div>
                         </div>
                         <p className="text-gray-700 leading-relaxed">{comment.text}</p>
@@ -600,7 +612,7 @@ const LinkAnalysis = () => {
                           
                           <div className="flex items-center gap-1 text-sm font-medium text-pink-600 bg-pink-50 px-2 py-1 rounded-full">
                             <ThumbsUp size={14} />
-                            {formatNumber(comment.total_likes_comment || 0)}
+                            {formatNumber(getCommentLikes(comment))}
                           </div>
                         </div>
                       </div>
