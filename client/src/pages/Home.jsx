@@ -45,7 +45,7 @@ const Home = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#F7FAFC' }}>
       {/* Hero Section */}
       <div className="pt-20 pb-16 px-4">
         <div className="max-w-6xl mx-auto">
@@ -58,7 +58,7 @@ const Home = () => {
             
             <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-6 leading-tight">
               <span className="text-red-500">YouTube</span> Sentiment & <br />
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <span className="text-gray-800">
                 Toxicity Analyzer
               </span>
             </h1>
@@ -162,7 +162,7 @@ const Home = () => {
             ].map((item, index) => (
               <div key={index} className="text-center">
                 <div className="relative mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-red-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     {item.icon}
                   </div>
                   <div className="absolute -top-2 -right-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded-full">
@@ -178,7 +178,7 @@ const Home = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="py-16 px-4 bg-gradient-to-r from-red-500 to-pink-600">
+      <div className="py-16 px-4 bg-gradient-to-r from-red-500 to-red-700">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Ready to analyze your content?
@@ -209,4 +209,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Home; 
