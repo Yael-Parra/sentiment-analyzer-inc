@@ -7,15 +7,20 @@ from server.database.connection_db import supabase
 from server.database.save_comments import get_comments_by_video, delete_comments_by_video, get_video_statistics
 from typing import List
 import json 
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    
 )
 
 @app.get("/")
@@ -147,8 +152,12 @@ def extract_comments_endpoint(request: VideoRequest):
 # Endpoint predicción
 @app.post("/CommentAnalyzer/", response_model=PredictionResponse)
 def predict_from_youtube(request: VideoRequest):
-    result = predict_pipeline(request.url_or_id, max_comments=request.max_comments)
-    return result
+    try:
+        result = predict_pipeline(request.url_or_id, max_comments=request.max_comments)
+        return result
+    except Exception as e:
+        print(f"❌ Error en predict_pipeline: {str(e)}")
+        return JSONResponse(status_code=500, content={"detail": f"Error en el análisis: {str(e)}"})
 
 
 # Endpoint GET para los gráficos, se traen por video_id:
