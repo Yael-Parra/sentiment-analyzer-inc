@@ -3,7 +3,7 @@ import os, requests, time, pandas as pd
 import re
 
 load_dotenv()
-API_KEY = os.getenv("YouTube_Data_API_v3")
+API_KEY = os.getenv("API_KEY")
 
 def extract_video_id(url_or_id):
     print(f"🔍 Extrayendo ID del vídeo de: {url_or_id}")
