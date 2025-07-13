@@ -124,18 +124,36 @@ The platform supports:
 
 ## ✍ Deployment Instructions
 
-1. Clone the repository
-   ```bash
-   git clone https://github.com/your-repo/youtube-sentiment-analyzer.git
-   cd youtube-sentiment-analyzer
+1. Run it in your PC with a virtual environment:
+  1. Clone the repository
+     ```
+     git clone https://github.com/your-repo/youtube-sentiment-analyzer.git
+     cd youtube-sentiment-analyzer
+      ```
+  2. Set up your .env file based on .env.example
+  3. You need to have java installed in your PC and ...   
+  4. To run in the terminal:
+       You need to open 2 terminal windows.
+         - In the first terminal, go to the root of the project and run:
+         ```
+         uvicorn server.main:app --reload
+         ```
+         - In the second terminal go to client then run:
+         ```
+         cd client
+         npm run dev
+         ```
 
-2. Set up your .env file based on .env.example
-
-3. Build and run the application
-```
-docker-compose --env-file .env up --build
-```
-4. Visit your deployment URL (Azure App Service or Container Instance)
+2. Run it with Docker:
+  1. Build and run the application
+  ```
+  docker-compose up --build
+  ```
+3. Try it in our website:
+  1. Visit:
+     ```
+     www.
+     ```
 
 ---
 ## 👩‍💻 Contributors
