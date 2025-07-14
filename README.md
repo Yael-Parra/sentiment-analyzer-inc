@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="client/src/assets/img-readme-feel-flow.png" alt="YouTube Comments Sentiment and Toxicity Analyzer Logo" width="1000"/>
+  <img src="client/src/assets/img-readme-feel-flow.png" alt="YouTube Comments Sentiment and Toxicity Analyzer Logo" width="900"/>
 </p>
 
 
