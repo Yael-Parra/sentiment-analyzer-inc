@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="img/logo.png" alt="YouTube Comments Sentiment and Toxicity Analyzer Logo" width="200"/>
+  <img src="client/src/assets/feelflowlogo.png" alt="YouTube Comments Sentiment and Toxicity Analyzer Logo" width="200"/>
 </p>
+
 
 <h1 align="center">YouTube Comments Sentiment and Toxicity Analyzer</h1>
 
