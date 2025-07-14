@@ -138,37 +138,57 @@ The platform supports:
 ## ✍ Deployment Instructions
 
 1. Clone the repository
-     ```
-     git clone https://github.com/your-repo/youtube-sentiment-analyzer.git
-     cd youtube-sentiment-analyzer
-      ```
-2. Set up your .env file based on .env.example
+    ```bash
+    git clone https://github.com/your-repo/youtube-sentiment-analyzer.git
+    cd youtube-sentiment-analyzer
+    ```
 
-   1. Run in virtual environment:
-      1.1 You need to have java installed in your PC and ...   
-      1.2. To run in the terminal:
-      1.3 Open 2 terminal windows.
-         - In the first terminal, go to the root of the project and run:
-         ```
-         uvicorn server.main:app --reload
-         ```
-         - In the second terminal go to client then run:
-         ```
-         cd client
-         npm run dev
-         ```
-    2. Run it with Docker:
-      2.1  You need to have docker in your PC 
-      2.2 Build and run the application
-      ```
+2. Set up your `.env` file based on `.env.example`.
+
+3. To run, you have two options:
+
+    #### 3.1 Run in virtual environment
+    ❗ You need to have **Java installed** on your PC.
+
+    - Create virtual environment  
+    - Install backend and frontend dependencies
+
+    ```bash
+    cd client/
+    npm install
+    npm install axios lucide-react
+    npm install html2pdf.js  # This one is separate due to compatibility concerns
+    ```
+
+    - Run in terminal:
+
+      Open **two terminal windows**:
+
+      - In the first one:
+        ```bash
+        uvicorn server.main:app --reload
+        ```
+
+      - In the second one:
+        ```bash
+        cd client/
+        npm run dev
+        ```
+
+    #### 3.2 Run with Docker
+    ❗ You need to have **Docker installed** on your PC.
+
+    - Build and run the application:
+      ```bash
       docker-compose up --build
       ```
 
-3. Try it in our website:
-  1. Visit:
-     ```
-     www.
-     ```
+4. Try it on our website:
+    - Visit:
+      ```
+      www.
+      ```
+
 
 ---
 ## 👩‍💻 Contributors
