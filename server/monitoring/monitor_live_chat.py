@@ -4,14 +4,20 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ROOT_DIR))
 import asyncio
-import time
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Any
+import httpx
 import requests
-from server.outils.prediction_pipeline import predict_pipeline
+from server.outils.prediction_pipeline import predict_toxicity_for_text
 import os
 from dotenv import load_dotenv
 
+load_dotenv(override=True)
+API_KEY = os.getenv("YouTube_Data_API_v3")
+print(f"🔑 [DEBUG] Clave de API cargada: ...{API_KEY[-4:] if API_KEY else 'NINGUNA'}")
+
+if not API_KEY:
+    print("❌ ERROR: No se pudo cargar la variable de entorno 'YouTube_Data_API_v3'. Revisa tu archivo .env.")
 
 
 class LiveChatMonitor:
@@ -19,14 +25,17 @@ class LiveChatMonitor:
         self.api_key = api_key
         self.active_monitors: Dict[str, asyncio.Task] = {}
         self.monitor_data: Dict[str, Dict] = {}
+        self.client = httpx.AsyncClient()
 
-    def get_live_chat_id(self, video_id: str) -> str:
+    async def get_live_chat_id(self, video_id: str) -> str:
         url = f"https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id={video_id}&key={self.api_key}"
-        res = requests.get(url).json()
         try:
-            return res["items"][0]["liveStreamingDetails"]["activeLiveChatId"]
-        except Exception:
-            print(f"❌ No se pudo obtener el liveChatId para video {video_id}")
+            res = await self.client.get(url)
+            res.raise_for_status()
+            data = res.json()
+            return data["items"][0]["liveStreamingDetails"]["activeLiveChatId"]
+        except (httpx.HTTPStatusError, KeyError, IndexError) as e:
+            print(f"❌ No se pudo obtener el liveChatId para video {video_id}: {e}")
             return None
 
     async def start_monitoring(self, video_id: str):
@@ -34,7 +43,7 @@ class LiveChatMonitor:
             print(f"⚠️ Video {video_id} ya está siendo monitoreado")
             return False
 
-        chat_id = self.get_live_chat_id(video_id)
+        chat_id = await self.get_live_chat_id(video_id)
         if not chat_id:
             return False
 
@@ -43,7 +52,8 @@ class LiveChatMonitor:
         self.monitor_data[video_id] = {
             "started_at": datetime.now(),
             "total_messages": 0,
-            "toxic_messages": 0
+            "toxic_messages": 0,
+            "comments": []
         }
         print(f"📡 Monitoreo en vivo iniciado para video {video_id}")
         return True
@@ -62,25 +72,33 @@ class LiveChatMonitor:
                 if next_page_token:
                     params["pageToken"] = next_page_token
 
-                response = requests.get(base_url, params=params).json()
-                next_page_token = response.get("nextPageToken")
-                wait = response.get("pollingIntervalMillis", 2000) / 1000
+                response = await self.client.get(base_url, params=params)
+                response.raise_for_status()
+                data = response.json()
+                
+                next_page_token = data.get("nextPageToken")
+                wait = data.get("pollingIntervalMillis", 2000) / 1000
 
-                for item in response.get("items", []):
-                    author = item["authorDetails"]["displayName"]
-                    message = item["snippet"]["displayMessage"]
-                    published_at = item["snippet"]["publishedAt"]
-                    comment_id = item["id"]
-
+                for item in data.get("items", []):
                     self.monitor_data[video_id]["total_messages"] += 1
+                    
+                    message = item["snippet"]["displayMessage"]
+                    author = item["authorDetails"]["displayName"]
 
-                    # Detectar toxicidad
-                    result = predict_pipeline(message)
-                    if result.get("is_toxic"):
+                    toxicity_result = predict_toxicity_for_text(message)
+                    
+                    comment_data = {
+                        "Autor": author,
+                        "Mensaje": message,
+                        "Es Tóxico": toxicity_result["is_toxic"],
+                        "Hora": datetime.now().strftime("%H:%M:%S")
+                    }
+                    self.monitor_data[video_id]["comments"].insert(0, comment_data)
+                    # Limitamos a los últimos 50 comentarios para no saturar la memoria
+                    self.monitor_data[video_id]["comments"] = self.monitor_data[video_id]["comments"][:50]
+
+                    if toxicity_result["is_toxic"]:
                         self.monitor_data[video_id]["toxic_messages"] += 1
-                        print(f"⚠️ Comentario tóxico detectado: {author}: {message}")
-                    else:
-                        print(f"💬 {author}: {message}")
 
                 await asyncio.sleep(wait)
             except asyncio.CancelledError:
@@ -94,14 +112,9 @@ class LiveChatMonitor:
         if video_id in self.active_monitors:
             self.active_monitors[video_id].cancel()
             del self.active_monitors[video_id]
-            del self.monitor_data[video_id]
             print(f"🛑 Monitoreo detenido para video {video_id}")
 
     def get_status(self):
         return self.monitor_data
 
-
-
-load_dotenv()
-API_KEY = os.getenv("YouTube_Data_API_v3")
 live_monitor = LiveChatMonitor(API_KEY)
