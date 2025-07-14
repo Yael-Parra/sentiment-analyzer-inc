@@ -1,10 +1,9 @@
-# Node modules
-# UV 
+#
+.env
 .python-version
 pyproject.toml
 uv.lock
-
-# node modules
+# Node modules
 node_modules
 
 # OS específicos
@@ -28,7 +27,8 @@ dist-ssr
 # Python
 venv/
 __pycache__/
-
+*__pycache__
+*/__pycache__
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -44,4 +44,5 @@ etl/youtube_comments.csv
 etl/data/youtube_comments_hp2QZ0BGaps.csv.gz
 model_training/xlm-roberta-base/model-xlm-roberta-base
 model_training/xlm-roberta-base/model-xlm-roberta-robust
-model_training/xlm-roberta-base/dataset_youtube_para_etiquetar.csv 
+model_training/xlm-roberta-base/dataset_youtube_para_etiquetar.csv
+*.pyc 

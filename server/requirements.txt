@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pandas
+numpy
+requests
+python-dotenv
+supabase
+pydantic
+tqdm
+vaderSentiment
+transformers
+websockets
+torch
+spacy
+scikit-learn

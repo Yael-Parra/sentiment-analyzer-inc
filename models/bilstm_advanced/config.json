@@ -1,0 +1,182 @@
+{
+  "classes": {
+    "class_names": [
+      "toxic",
+      "hatespeech",
+      "abusive",
+      "threat",
+      "provocative",
+      "obscene",
+      "racist",
+      "nationalist",
+      "sexist",
+      "homophobic",
+      "religious_hate",
+      "radicalism"
+    ],
+    "target_classes": [
+      "is_toxic",
+      "is_hatespeech",
+      "is_abusive",
+      "is_threat",
+      "is_provocative",
+      "is_obscene",
+      "is_racist",
+      "is_nationalist",
+      "is_sexist",
+      "is_homophobic",
+      "is_religious_hate",
+      "is_radicalism"
+    ],
+    "num_classes": 12
+  },
+  "model_config": {
+    "vocab_size": 1283,
+    "embedding_dim": 256,
+    "hidden_dim": 192,
+    "num_classes": 12,
+    "num_numeric_features": 107,
+    "num_layers": 2,
+    "max_sequence_length": 50,
+    "dropout_rate": 0.4
+  },
+  "test_metrics": {
+    "f1_macro": 0.9581995556974471,
+    "f1_micro": 0.959604641168887,
+    "f1_weighted": 0.962574205458089,
+    "hamming_loss": 0.01284153014421463,
+    "jaccard_score": 0.7299180030822754,
+    "class_metrics": {
+      "toxic": {
+        "precision": 1.0,
+        "recall": 0.9980806142034548,
+        "f1": 0.9990393852065321,
+        "support": 521.0
+      },
+      "hatespeech": {
+        "precision": 0.8868778280542986,
+        "recall": 1.0,
+        "f1": 0.9400479616306954,
+        "support": 392.0
+      },
+      "abusive": {
+        "precision": 0.8733624454148472,
+        "recall": 0.966183574879227,
+        "f1": 0.9174311926605504,
+        "support": 207.0
+      },
+      "threat": {
+        "precision": 1.0,
+        "recall": 0.9928571428571429,
+        "f1": 0.996415770609319,
+        "support": 140.0
+      },
+      "provocative": {
+        "precision": 0.7225806451612903,
+        "recall": 0.9911504424778761,
+        "f1": 0.8358208955223881,
+        "support": 113.0
+      },
+      "obscene": {
+        "precision": 0.7159090909090909,
+        "recall": 1.0,
+        "f1": 0.8344370860927153,
+        "support": 126.0
+      },
+      "racist": {
+        "precision": 1.0,
+        "recall": 0.9919354838709677,
+        "f1": 0.9959514170040485,
+        "support": 124.0
+      },
+      "nationalist": {
+        "precision": 0.975609756097561,
+        "recall": 1.0,
+        "f1": 0.9876543209876543,
+        "support": 120.0
+      },
+      "sexist": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 124.0
+      },
+      "homophobic": {
+        "precision": 0.9833333333333333,
+        "recall": 1.0,
+        "f1": 0.9915966386554621,
+        "support": 118.0
+      },
+      "religious_hate": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 130.0
+      },
+      "radicalism": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 129.0
+      }
+    },
+    "category_metrics": {
+      "identity": 0.9950404753294328,
+      "behavior": 0.9374169646980643,
+      "content": 0.8872425238617053,
+      "general": 0.9990393852065321
+    },
+    "global_precision": 0.9265560165975104,
+    "global_recall": 0.9950980392156863,
+    "loss": 0.035504924007303394
+  },
+  "training_results": {
+    "best_f1_macro": 0.9634195871331265,
+    "best_loss": 0.03405574133779364,
+    "epochs_trained": 59,
+    "final_train_loss": 0.03636358294987299,
+    "final_val_loss": 0.03299989931782385
+  },
+  "dataset_info": {
+    "total_samples": 6096,
+    "vocab_size": 1283,
+    "num_features": 107,
+    "sequence_length": 50
+  },
+  "thresholds": {
+    "toxic": 0.6,             
+    "hatespeech": 0.5,         
+    "abusive": 0.5,              
+    "threat": 0.3,               
+    "provocative": 0.85,        
+    "obscene": 0.85,              
+    "racist": 0.8,               
+    "nationalist": 0.5,          
+    "sexist": 0.97,               
+    "homophobic": 0.97,         
+    "religious_hate": 0.85,     
+    "radicalism": 0.3            
+  },
+  "class_weights": [
+    1.1706146001815796,
+    1.631132960319519,
+    3.0223140716552734,
+    4.96875,
+    4.6884613037109375,
+    5.107542037963867,
+    4.799212455749512,
+    4.700514316558838,
+    4.902144908905029,
+    4.955284595489502,
+    4.982288837432861,
+    4.955284595489502
+  ],
+  "metadata": {
+    "export_timestamp": "20250710_005944",
+    "pytorch_version": "2.2.2",
+    "total_parameters": 2752159,
+    "architecture": "BiLSTM_Hybrid_MultiHead_Attention_Categorical",
+    "problem_type": "multi_label_classification",
+    "language": "English"
+  }
+}
