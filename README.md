@@ -43,7 +43,7 @@ The platform supports:
 
 - WebSite
 
-  feel-flow.eastus.cloudapp.azure.com
+  http://feel-flow.eastus.cloudapp.azure.com/statistics/lom1D8raoA4
   
 - Documentation
 - Presentation
