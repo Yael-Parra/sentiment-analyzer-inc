@@ -87,8 +87,8 @@ const LinkAnalysis = () => {
     }
   };
 
-  // Función para ir a la página de estadísticas
-  const goToStatistics = () => {
+  // Función para ir a la página de estadísticas - con análisis automático
+  const goToStatistics = async () => {
     if (!videoUrl.trim()) {
       setError('Please enter a YouTube URL first');
       return;
@@ -98,14 +98,46 @@ const LinkAnalysis = () => {
     console.log('🔍 Extracting videoId from URL:', videoUrl);
     console.log('🔍 Extracted videoId:', videoId);
     
-    if (videoId) {
-      const targetUrl = `/statistics/${videoId}`;
-      console.log('🚀 Navigating to:', targetUrl);
-      navigate(targetUrl);
+    if (!videoId) {
+      setError('Invalid YouTube URL');
+      return;
+    }
+
+    // Si no hay datos de análisis, ejecutar análisis automáticamente
+    if (!analysisData || analysisData.total_comments === 0) {
+      console.log('🔄 No analysis data found, running automatic analysis...');
+      
+      // Verificar URL válida
+      if (!isValidYouTubeUrl(videoUrl)) {
+        setError('The YouTube URL is not valid');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        console.log("🚀 Starting automatic analysis for statistics...");
+        const data = await analyzeYouTubeVideo(videoUrl, maxComments);
+        
+        if (data) {
+          console.log("✅ Automatic analysis completed, navigating to statistics...");
+          const targetUrl = `/statistics/${videoId}`;
+          navigate(targetUrl);
+        } else {
+          throw new Error("No data received from server");
+        }
+      } catch (err) {
+        console.error("❌ Error in automatic analysis:", err);
+        setError(err.message || "Error analyzing video for statistics");
+      } finally {
+        setLoading(false);
+      }
     } else {
-      // Si no se puede extraer el videoId, ir a statistics general
-      console.log('⚠️ Could not extract videoId, going to general statistics');
-      navigate('/statistics');
+      // Si ya hay datos, ir directamente a statistics
+      console.log('✅ Analysis data exists, navigating to statistics...');
+      const targetUrl = `/statistics/${videoId}`;
+      navigate(targetUrl);
     }
   };
 
@@ -370,20 +402,13 @@ const LinkAnalysis = () => {
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-2 border border-white/20">
             {[
               { id: 'input', label: 'Analysis', icon: Play, color: 'text-blue-500' },
-              { id: 'results', label: 'Results', icon: BarChart3, color: 'text-green-500' },
-              { id: 'statistics', label: 'Statistics', icon: TrendingUp, color: 'text-purple-500' }
+              { id: 'results', label: 'Results', icon: BarChart3, color: 'text-green-500' }
             ].map(tab => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    if (tab.id === 'statistics') {
-                      goToStatistics();
-                    } else {
-                      setActiveTab(tab.id);
-                    }
-                  }}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
                     activeTab === tab.id
                       ? 'bg-red-500 text-white shadow-lg transform scale-105'
@@ -452,7 +477,7 @@ const LinkAnalysis = () => {
                 <button
                   onClick={handleAnalyze}
                   disabled={loading}
-                  className="flex-1 bg-gradient-to-r from-red-500 to-red-700 text-white px-8 py-4 rounded-2xl hover:from-red-600 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-lg"
+                  className="w-full bg-gradient-to-r from-red-500 to-red-700 text-white px-8 py-4 rounded-2xl hover:from-red-600 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-lg"
                 >
                   {loading ? (
                     <>
@@ -465,15 +490,6 @@ const LinkAnalysis = () => {
                       Start Analysis
                     </>
                   )}
-                </button>
-                
-                <button
-                  onClick={goToStatistics}
-                  disabled={!videoUrl.trim()}
-                  className="flex-1 bg-gradient-to-r from-purple-500 to-purple-700 text-white px-8 py-4 rounded-2xl hover:from-purple-600 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-lg"
-                >
-                  <TrendingUp size={24} />
-                  View Statistics
                 </button>
               </div>
             </div>
@@ -679,10 +695,20 @@ const LinkAnalysis = () => {
               <p className="text-indigo-100 mb-6">Get comprehensive charts, advanced metrics, and interactive visualizations</p>
               <button
                 onClick={goToStatistics}
-                className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-semibold hover:bg-gray-50 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-3 mx-auto"
+                disabled={loading}
+                className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-3 mx-auto"
               >
-                <BarChart3 size={24} />
-                View Advanced Statistics
+                {loading ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={24} />
+                    Preparing Statistics...
+                  </>
+                ) : (
+                  <>
+                    <BarChart3 size={24} />
+                    View Advanced Statistics
+                  </>
+                )}
               </button>
             </div>
           </div>
