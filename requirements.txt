@@ -29,6 +29,9 @@ supabase
 supafunc
 uvicorn
 websockets
+streamlit
+httpx
+
 
 # IMPORTANTE: Después de instalar ejecutar:
 # python -m spacy download en_core_web_sm
