@@ -27,6 +27,36 @@ TOXICITY_FIELDS = [
     "sexist", "homophobic", "radicalism"
 ]
 
+# ✅ NUEVA FUNCIÓN LIGERA PARA PREDICCIÓN EN TIEMPO REAL
+def predict_toxicity_for_text(text: str) -> Dict[str, Any]:
+    """
+    Ejecuta solo la predicción de toxicidad del modelo para un único texto.
+    Es ligera y rápida, ideal para monitoreo en vivo.
+    Reutiliza el 'model_loader' ya cargado en memoria.
+    """
+    if not model_loader:
+        print("⚠️ [Live] Modelo no cargado, no se puede predecir la toxicidad.")
+        return {"is_toxic": False, "detected_types": [], "probabilities": {}}
+
+    try:
+        # Llama directamente al predict del modelo cargado
+        prediction = model_loader.predict(
+            text, 
+            return_probabilities=True, 
+            return_categories=False
+        )
+        detected_types = prediction.get("detected_types", [])
+        is_toxic = len(detected_types) > 0
+        
+        return {
+            "is_toxic": is_toxic,
+            "detected_types": detected_types,
+            "probabilities": prediction.get("probabilities", {})
+        }
+    except Exception as e:
+        print(f"❌ [Live] Error en predicción de texto individual: {e}")
+        return {"is_toxic": False, "detected_types": [], "probabilities": {}}
+
 def _create_comment_from_error(video_id: str, row: pd.Series) -> Comment:
     return Comment(
         video_id=video_id,
@@ -123,11 +153,8 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
     df = pd.DataFrame(comments)
 
     # 3. Función de limpieza
-    df_clean = clean_youtube_data(df)
+    df_clean = clean_youtube_data(df.copy())
 
-    print(f"🔍 Columnas después de cleaning: {df_clean.columns.tolist()}")
-    print(f"🔍 Sample like_count_comment: {df_clean['like_count_comment'].head().tolist()}")
-    print(f"🔍 Total likes en DataFrame: {df_clean['like_count_comment'].sum()}")
     # 4. Verificar que el modelo esté cargado
     if not model_loader:
         raise Exception("Modelo MULTITOXIC no disponible")
@@ -135,42 +162,73 @@ def predict_pipeline(youtube_url_or_id: str, max_comments: int = 100) -> Predict
     self_promotional_count = df_clean['is_self_promotional'].sum() if 'is_self_promotional' in df_clean.columns else 0
     
     # 5. Predicción fila por fila del DataFrame
-    enriched_comments: List[Comment] = []        
-    for _, row in df_clean.iterrows():  
+    # enriched_comments: List[Comment] = []        
+    # for _, row in df_clean.iterrows():  
+    #     try:
+    #         # Predicción individual con MULTITOXIC
+    #         prediction = model_loader.predict(
+    #             row["text"], 
+    #             return_probabilities=True, 
+    #             return_categories=False
+    #         )
+            
+    #         # Extraer resultados del modelo
+    #         probs = prediction.get("probabilities", {})
+    #         detected_types = prediction.get("detected_types", [])
+    enriched_comments = []
+    print(f"🧠 Aplicando modelo a {len(df)} comentarios...")
+
+    # Iteramos sobre el DataFrame ORIGINAL para el texto del modelo
+    # y usamos el limpio (df_clean) para las otras característics
+    for (idx, original_row), (_, clean_row) in zip(df.iterrows(), df_clean.iterrows()):
         try:
-            # Predicción individual con MULTITOXIC
+            # ✅ USAR TEXTO ORIGINAL PARA LA PREDICCIÓN
             prediction = model_loader.predict(
-                row["text"], 
+                original_row["text"], 
                 return_probabilities=True, 
                 return_categories=False
             )
             
-            # Extraer resultados del modelo
             probs = prediction.get("probabilities", {})
             detected_types = prediction.get("detected_types", [])
-
+            print("-" * 50)
+            print(f"💬 Procesando Comentario #{idx}: '{original_row['text'][:80]}...'")
+            if detected_types:
+                print(f"  🚨 MODELO DETECTÓ: {detected_types}")
+                # Imprimir la confianza solo para los tipos detectados
+                for toxic_type in detected_types:
+                    confidence = probs.get(toxic_type, 0)
+                    print(f"    - Confianza en '{toxic_type}': {confidence:.2%}")
+            else:
+                # Para comentarios limpios, mostrar la probabilidad más alta de toxicidad para ver si estuvo cerca
+                if probs:
+                    max_toxic_type = max(probs, key=probs.get)
+                    max_prob = probs[max_toxic_type]
+                    print(f"  ✅ MODELO: Limpio. (Toxicidad más alta: '{max_toxic_type}' con {max_prob:.2%})")
+                else:
+                    print("  ✅ MODELO: Limpio.")
             # Construir comentario enriquecido
             comment_obj = Comment(
                 video_id=video_id,
-                text=row["text"],
+                text=original_row["text"],
                 # USAR DICT COMPREHENSION PARA PROBABILIDADES
                 **{f"{field}_probability": probs.get(field, 0.0) for field in TOXICITY_FIELDS},
                 # USAR DICT COMPREHENSION PARA BOOLEANOS
                 **{f"is_{field}": field in detected_types for field in TOXICITY_FIELDS},
                 # Análisis de sentimientos (del cleaning pipeline)
-                sentiment_type=row.get("sentiment_type"),
-                sentiment_score=row.get("sentiment_score"),
-                sentiment_intensity=row.get("sentiment_intensity"), 
-                total_likes_comment=row.get("like_count_comment", 0),
+                sentiment_type=clean_row.get("sentiment_type"),
+                sentiment_score=clean_row.get("sentiment_score"),
+                sentiment_intensity=clean_row.get("sentiment_intensity"), 
+                total_likes_comment=original_row.get("like_count_comment", 0),
             )
             enriched_comments.append(comment_obj)
 
         except Exception as e:
-            print(f"⚠️ Error prediciendo comentario: {e}")
+            print(f"⚠️ Error procesando comentario {idx}: {e}")
             # Comentario sin predicciones en caso de error
-            error_comment = _create_comment_from_error(video_id, row)
-            enriched_comments.append(error_comment)
-
+            enriched_comments.append(_create_comment_from_error(original_row, video_id, str(e)))
+    print(f"✅ {len(enriched_comments)} comentarios enriquecidos.")   
+    
     # 6. Calcular estadísticas desde los comentarios enriquecidos
     toxicity_stats = _calculate_toxicity_stats(enriched_comments)
     sentiment_stats = _calculate_sentiment_stats(enriched_comments)
