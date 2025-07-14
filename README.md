@@ -47,7 +47,7 @@ The platform supports:
   http://feel-flow.eastus.cloudapp.azure.com/statistics/lom1D8raoA4
   
 - Documentation
-- 
+  
   https://deepwiki.com/Yael-Parra/sentiment-analyzer-inc
   
 - Presentation
