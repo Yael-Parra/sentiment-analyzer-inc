@@ -26,8 +26,11 @@
 
 ## 📌 Project Overview
 
-**YouTube Comments Sentiment Analyzer** is a full-stack application that allows creators to **analyze the emotional sentiment of comments as well as the type of toxicities** on their YouTube videos.  
+<p align="justify">
+  
+**YouTube Comments Sentiment Analyzer** is a full-stack application that allows creators to **analyze the emotional sentiment and 12 types of toxicities** on their YouTube videos.  
 Whether you're a seasoned content creator or an aspiring YouTuber, this tool provides a **dashboard-friendly interface** to help you interpret your audience's emotional response and adjust your content strategy accordingly.
+</p>
 
 The platform supports:
 - Automatic fetching and processing of YouTube video comments
@@ -68,7 +71,7 @@ The platform supports:
 - Expand dataset to **retrain models** with better generalization
 - Improve **dashboard UX** and visual customization
 - Add **multi-language support**
-- Integrate **YouTube Shorts & Live Chat analysis**
+- Integrate **YouTube Shorts & Live Chat analysis** (in progress...)
 
 ---
 
