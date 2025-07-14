@@ -135,7 +135,9 @@ The platform supports:
 - **Containerization**: Docker (multi-service with docker-compose)
 - **Deployment**: Hosted on Azure via container services
 
-
+<p align="center">
+  <img src="./client/src/assets/diagram_arquitecture_sentiment.png" alt="Diagrama de Arquitectura del Sistema" width="700"/>
+</p>
 ---
 
 ## 📁 Project Structure
