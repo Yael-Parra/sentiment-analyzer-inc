@@ -127,18 +127,129 @@ The platform supports:
 ## 🧪 Model Architecture
 
 - **Data Ingestion**: YouTube API
-- **Sentiment Processing**:  
+- **Toxicity and Sentiment Processing**:  
   - Rule-based with **VADER**  
   - Supervised learning with **spaCy** + manual annotation
 - **Storage**: Supabase
 - **Frontend UI**: React + Tailwind + Chart libraries
 - **Containerization**: Docker (multi-service with docker-compose)
 - **Deployment**: Hosted on Azure via container services
+```
+                                +-----------------------------+
+                                |      Usuario en Frontend    |
+                                |  (React + Vite + Tailwind)  |
+                                +--------------+--------------+
+                                               |
+                                    Ingresa URL de video (YouTube)
+                                               |
+                                               v
+                                +--------------+--------------+
+                                |    API Request al Backend    |
+                                |     (FastAPI en Docker)      |
+                                +--------------+--------------+
+                                               |
+                                     Extrae comentarios via
+                                     YouTube Data API (v3)
+                                               |
+                                               v
+                                +------------------------------+
+                                |    Módulo de Preprocesamiento |
+                                | (limpieza, tokenización, etc.)|
+                                +------------------------------+
+                                               |
+                          +--------------------+--------------------+
+                          |                                         |
+                +---------v----------+                    +---------v----------+
+                |   Modelo VADER     |                    |  Modelo spaCy      |
+                | (polarity general) |                    | (12 clases toxic.) |
+                +---------+----------+                    +---------+----------+
+                          |                                         |
+            +-------------v-------------+             +-------------v-------------+
+            | Puntaje de polaridad      |             | Etiquetas de toxicidad    |
+            +-------------+-------------+             +-------------+-------------+
+                          |                                         |
+                          +-------------------+---------------------+
+                                              |
+                                              v
+                           +------------------+------------------+
+                           |  Almacenamiento en Supabase (DB)   |
+                           +------------------+------------------+
+                                              |
+               +------------------------------+------------------------------+
+               |                                                             |
+   +-----------v-----------+                                    +-----------v-----------+
+   | Tabla: Estadísticas   |                                    | Tabla: Comentarios    |
+   | (agregados, promedios)|                                    | (texto + etiquetas)   |
+   +-----------+-----------+                                    +-----------+-----------+
+               |                                                             |
+               +-------------------+-----------------------------+----------+
+                                                       |
+                                    Consulta desde Frontend vía API
+                                                       |
+                                                       v
+                                        +--------------+--------------+
+                                        |  Visualización de Gráficos  |
+                                        |  (React + libs de charting) |
+                                        +-----------------------------+
+
+
+```
 
 ---
 
 ## 📁 Project Structure
-
+```
+📁 sentiment-analyzer-inc/
+│
+├── 📁 client/ (Frontend - React + Vite)
+│ ├── 📁 assets/ 
+│ ├── 📁 components/
+│ ├── 📁 layout/ 
+│ ├── 📁 pages/ 
+│ ├── 📁 routes/ 
+│ ├── 📁 services/ 
+│ ├── 📄 App.css
+│ ├── 📄 App.jsx 
+│ ├── 📄 main.jsx 
+│ ├── 📄 index.html 
+│ ├── 🐋 Dockerfile 
+│ ├── ⚙️ package.json | package-lock.json 
+│ ├── ⚙️ postcss.config.js | tailwind.config.js 
+│ └── ⚙️ vite.config.js 
+│
+├── 📁 server/ (Backend - Python)
+│ ├── 📁 database/
+│ │ ├── 📄 connection_db.py 
+│ │ └── 📄 save_comments.py 
+│ ├── 📁 utils/
+│ │ ├── 📄 cleaning_pipeline.py
+│ │ └── 📄 prediction_pipeline.py
+│ ├── 🐋 Dockerfile 
+│ ├── 📄 main.py 
+│ ├── 📄 requirements.txt 
+│ ├── 📄 schemas.py
+│ └── 📁 test/ (unit test)
+│
+├── 📁 models/ 
+│ ├── 📁 bilstm_advanced/ 
+│ │ ├── 📄 bilstm.md 
+│ │ ├── 📄 config.json
+│ │ ├── 📄 features_data.pkl
+│ │ ├── 📄 model_weights.pth 
+│ │ └── 📄 processor_data.pkl
+│ └── 📄 best_model_svm.pkl 
+│
+├── 📁 eda/ (Análisis exploratorio - Jupyter Notebooks)
+├── 📁 etl/ (Scripts de transformación de datos)
+├── 📁 model_training/ (Entrenamiento de modelos)
+│
+├── 📜 .gitignore
+├── 📜 docker-compose.yml (Orquestación de contenedores)
+├── 📜 pyproject.toml (Configuración Python)
+├── 📜 README.md
+├── 📜 requirements.txt (Dependencias globales)
+└── 📜 setup.sh (Script de instalación)
+```
 
 ---
 
