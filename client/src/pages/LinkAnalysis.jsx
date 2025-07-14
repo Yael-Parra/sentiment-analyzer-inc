@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   analyzeYouTubeVideo, 
   getSavedComments, 
@@ -38,6 +38,7 @@ import {
 
 const LinkAnalysis = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [videoUrl, setVideoUrl] = useState('');
   const [analysisData, setAnalysisData] = useState(null);
   const [savedComments, setSavedComments] = useState([]);
@@ -47,9 +48,21 @@ const LinkAnalysis = () => {
   const [activeTab, setActiveTab] = useState('input');
   const [maxComments, setMaxComments] = useState(100);
 
-  // Función helper para obtener likes de un comentario
+  // Pre-rellenar URL si viene desde Statistics
+  useEffect(() => {
+    const videoFromParams = searchParams.get('video');
+    if (videoFromParams) {
+      setVideoUrl(`https://www.youtube.com/watch?v=${videoFromParams}`);
+    }
+  }, [searchParams]);
+
+  // Función helper para obtener likes de un comentario - más robusta
   const getCommentLikes = (comment) => {
-    return comment?.total_likes_comment || comment?.like_count || comment?.likes || 0;
+    return comment?.total_likes_comment || 
+           comment?.like_count || 
+           comment?.likes || 
+           comment?.likeCount ||
+           comment?.thumbsUpCount || 0;
   };
 
   // Función para formatear números grandes
@@ -74,6 +87,28 @@ const LinkAnalysis = () => {
     }
   };
 
+  // Función para ir a la página de estadísticas
+  const goToStatistics = () => {
+    if (!videoUrl.trim()) {
+      setError('Please enter a YouTube URL first');
+      return;
+    }
+    
+    const videoId = extractVideoIdFromUrl(videoUrl);
+    console.log('🔍 Extracting videoId from URL:', videoUrl);
+    console.log('🔍 Extracted videoId:', videoId);
+    
+    if (videoId) {
+      const targetUrl = `/statistics/${videoId}`;
+      console.log('🚀 Navigating to:', targetUrl);
+      navigate(targetUrl);
+    } else {
+      // Si no se puede extraer el videoId, ir a statistics general
+      console.log('⚠️ Could not extract videoId, going to general statistics');
+      navigate('/statistics');
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!videoUrl.trim()) {
       setError('Please enter a valid YouTube URL');
@@ -92,78 +127,117 @@ const LinkAnalysis = () => {
     try {
       console.log("Starting analysis..."); // Debug
       const data = await analyzeYouTubeVideo(videoUrl, maxComments);
-      console.log("Data received:", data); // Debug
+      console.log("📊 Raw data received:", data);
+      console.log("📊 Comments structure:", data.comments?.[0]);
+      console.log("📊 Stats structure:", data.stats);
       
       if (!data) {
         throw new Error("No data received from server");
       }
 
+      // Definición de tipos de toxicidad (igual que en MetricCards)
+      const TOXICITY_TYPES = [
+        'toxic', 'hatespeech', 'abusive', 'threat', 
+        'provocative', 'obscene', 'racist', 'nationalist',
+        'sexist', 'homophobic', 'religious_hate', 'radicalism'
+      ];
+
+      // Función helper para calcular toxicidad general
+      const isToxicGeneral = (comment) => {
+        return TOXICITY_TYPES.some(type => comment[`is_${type}`]) ||
+               comment?.is_toxic === true || 
+               comment?.toxic_probability > 0.5 ||
+               comment?.toxicity_score > 0.5;
+      };
+
       // Calcular sentimientos directamente desde comentarios
       const sentimentDistribution = { positive: 0, negative: 0, neutral: 0 };
+      let toxicCommentsCount = 0;
+      let potentialSarcasm = 0;
       
       if (data.comments && Array.isArray(data.comments)) {
         data.comments.forEach(comment => {
+          // Contar sentimientos
           if (comment?.sentiment_type) {
             const sentiment = comment.sentiment_type.toLowerCase();
             if (sentiment === 'positive') sentimentDistribution.positive++;
             else if (sentiment === 'negative') sentimentDistribution.negative++;
             else if (sentiment === 'neutral') sentimentDistribution.neutral++;
           }
+          
+          // Contar comentarios tóxicos usando la función mejorada
+          if (isToxicGeneral(comment)) {
+            toxicCommentsCount++;
+          }
+
+          // Detector de sarcasmo (positivo + tóxico)
+          if (comment?.sentiment_type === 'positive' && isToxicGeneral(comment)) {
+            potentialSarcasm++;
+          }
         });
       }
 
-      // Extraer datos de toxicidad desde stats
+      // Extraer datos de toxicidad desde stats - pero usar nuestro cálculo como respaldo
       const toxicityStats = data.stats || {};
+      const finalToxicCount = toxicityStats.is_toxic?.true || toxicCommentsCount;
 
-      // Calcular total de likes de comentarios - usando helper
+      // Calcular total de likes de comentarios - múltiples campos posibles
       const totalCommentLikes = data.comments ? 
-        data.comments.reduce((sum, c) => sum + getCommentLikes(c), 0) : 0;
+        data.comments.reduce((sum, c) => {
+          const likes = c?.total_likes_comment || c?.like_count || c?.likes || c?.likeCount || 0;
+          return sum + likes;
+        }, 0) : 0;
 
       // Calcular promedio de likes
       const avgLikes = data.comments && data.comments.length > 0 ?
         totalCommentLikes / data.comments.length : 0;
 
-      console.log("📊 Sentiment calculated:", sentimentDistribution);
-      console.log("📊 Toxicity from stats:", toxicityStats);
-      console.log("📊 Total comment likes:", totalCommentLikes);
-      console.log("📊 Sample comment with likes:", data.comments?.[0]);
-      console.log("📊 First 3 comments likes:", data.comments?.slice(0, 3).map(c => ({ 
-        text: c.text?.substring(0, 50) + '...', 
-        total_likes_comment: c.total_likes_comment,
-        like_count: c.like_count,
-        allKeys: Object.keys(c)
-      })));
+      // Calcular nivel de toxicidad
+      const totalComments = data.total_comments || data.comments?.length || 0;
+      const toxicityPercentage = totalComments > 0 ? 
+        Math.round((finalToxicCount / totalComments) * 100) : 0;
+
+      console.log("📊 Calculated metrics:");
+      console.log("  - Total comments:", totalComments);
+      console.log("  - Toxic comments:", finalToxicCount);
+      console.log("  - Toxicity %:", toxicityPercentage);
+      console.log("  - Total likes:", totalCommentLikes);
+      console.log("  - Avg likes:", avgLikes);
+      console.log("  - Potential sarcasm:", potentialSarcasm);
+      console.log("  - Sentiment distribution:", sentimentDistribution);
 
       setAnalysisData({
         // Datos principales
-        total_comments: data.total_comments || 0,
+        total_comments: totalComments,
         
-        // Toxicidad - desde stats
-        toxic_comments: toxicityStats.is_toxic?.true || 0,
-        general_toxicity_level: data.total_comments > 0 ?
-          `${Math.round((toxicityStats.is_toxic?.true || 0) / data.total_comments * 100)}%` : '0%',
+        // Toxicidad - usar nuestro cálculo mejorado
+        toxic_comments: finalToxicCount,
+        general_toxicity_level: `${toxicityPercentage}%`,
         
-        // Engagement - usando total_likes_comment
+        // Engagement - mejorado
         avg_likes: avgLikes,
+        
+        // Nuevas métricas del componente MetricCards
+        potential_sarcasm: potentialSarcasm,
         
         // Datos de sentimientos - calculados desde comentarios
         sentimientos: {
           sentiment_types_distribution: sentimentDistribution
         },
         
-        // Datos de toxicidad - desde stats
+        // Datos de toxicidad - desde stats pero con respaldo
         barras_toxicidad: toxicityStats,
         
         // Engagement stats mejorado
         engagement_stats: {
           mean_likes: avgLikes,
           total_likes: totalCommentLikes,
-          video_comments_total: data.total_comments || 0,
+          video_comments_total: totalComments,
           comments_with_urls: 0,
           url_percentage: 0,
           comments_with_tags: 0,
           tag_percentage: 0,
-          engagement_rate: 0,
+          engagement_rate: totalComments > 0 ? (totalCommentLikes / totalComments) * 100 : 0,
           video_likes_total: 0,
           video_views_total: 0
         },
@@ -173,11 +247,20 @@ const LinkAnalysis = () => {
 
       setActiveTab('results');
     } catch (err) {
-      console.error("Error in handleAnalyze:", err);
+      console.error("❌ Error in handleAnalyze:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
       setError(err.message || "An error occurred while analyzing the video");
       
       setAnalysisData({
         total_comments: 0,
+        toxic_comments: 0,
+        general_toxicity_level: '0%',
+        avg_likes: 0,
         error: err.message,
         rawData: err.response?.data
       });
@@ -287,20 +370,16 @@ const LinkAnalysis = () => {
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-2 border border-white/20">
             {[
               { id: 'input', label: 'Analysis', icon: Play, color: 'text-blue-500' },
-              { id: 'results', label: 'Results', icon: BarChart3, color: 'text-green-500' }
+              { id: 'results', label: 'Results', icon: BarChart3, color: 'text-green-500' },
+              { id: 'statistics', label: 'Statistics', icon: TrendingUp, color: 'text-purple-500' }
             ].map(tab => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => {
-                    if (tab.id === 'results') {
-                      const videoId = extractVideoIdFromUrl(videoUrl);
-                      if (videoId) {
-                        navigate(`/statistics/${videoId}`);
-                      } else {
-                        console.error("Invalid video URL");
-                      }
+                    if (tab.id === 'statistics') {
+                      goToStatistics();
                     } else {
                       setActiveTab(tab.id);
                     }
@@ -387,6 +466,15 @@ const LinkAnalysis = () => {
                     </>
                   )}
                 </button>
+                
+                <button
+                  onClick={goToStatistics}
+                  disabled={!videoUrl.trim()}
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-purple-700 text-white px-8 py-4 rounded-2xl hover:from-purple-600 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold text-lg"
+                >
+                  <TrendingUp size={24} />
+                  View Statistics
+                </button>
               </div>
             </div>
           </div>
@@ -415,18 +503,21 @@ const LinkAnalysis = () => {
                   <AlertTriangle className="mx-auto mb-3 text-red-500" size={32} />
                   <p className="text-sm font-semibold text-gray-600 mb-1">Toxic Comments</p>
                   <p className="text-3xl font-bold text-red-700">{analysisData.toxic_comments}</p>
+                  <p className="text-xs text-gray-500 mt-1">{analysisData.general_toxicity_level}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-2xl text-center border border-yellow-200 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <TrendingUp className="mx-auto mb-3 text-yellow-500" size={32} />
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Potential Sarcasm</p>
+                  <p className="text-3xl font-bold text-yellow-700">{analysisData.potential_sarcasm || 0}</p>
+                  <p className="text-xs text-gray-500 mt-1">Positive + Toxic</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-2xl text-center border border-pink-200 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                   <Heart className="mx-auto mb-3 text-pink-500" size={32} />
                   <p className="text-sm font-semibold text-gray-600 mb-1">Average Likes</p>
                   <p className="text-3xl font-bold text-pink-700">{Math.round(analysisData.avg_likes)}</p>
-                </div>
-
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl text-center border border-purple-200 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                  <Shield className="mx-auto mb-3 text-purple-500" size={32} />
-                  <p className="text-sm font-semibold text-gray-600 mb-1">Toxicity Level</p>
-                  <p className="text-3xl font-bold text-purple-700">{analysisData.general_toxicity_level}</p>
+                  <p className="text-xs text-gray-500 mt-1">per comment</p>
                 </div>
               </div>
             </div>
@@ -527,46 +618,6 @@ const LinkAnalysis = () => {
               </div>
             )}
 
-            {/* Toxicity Analysis */}
-            {analysisData.barras_toxicidad && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
-                <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-xl">
-                    <AlertTriangle className="text-red-500" size={24} />
-                  </div>
-                  Toxicity Analysis
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Object.entries(analysisData.barras_toxicidad).map(([type, data]) => {
-                    if (!data || typeof data !== 'object' || (!data.true && !data.false)) return null;
-                    
-                    const total = (data.true || 0) + (data.false || 0);
-                    const percentage = total > 0 ? (((data.true || 0) / total) * 100).toFixed(1) : 0;
-                    
-                    return (
-                      <div key={type} className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                        <h4 className="font-semibold mb-3 capitalize text-lg text-gray-700">
-                          {type.replace('is_', '').replace('_', ' ')}
-                        </h4>
-                        <div className="flex justify-between text-sm mb-3">
-                          <span className="text-red-600 font-medium">Detected: {data.true || 0}</span>
-                          <span className="text-green-600 font-medium">Clean: {data.false || 0}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                          <div
-                            className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-500"
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                        <p className="text-sm text-gray-600 font-medium">{percentage}% toxic</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Top Toxic Comments */}
             {analysisData.comentarios && (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20">
@@ -627,12 +678,7 @@ const LinkAnalysis = () => {
               <h3 className="text-2xl font-bold text-white mb-4">Want More Detailed Analytics?</h3>
               <p className="text-indigo-100 mb-6">Get comprehensive charts, advanced metrics, and interactive visualizations</p>
               <button
-                onClick={() => {
-                  const videoId = extractVideoIdFromUrl(videoUrl);
-                  if (videoId) {
-                    navigate(`/statistics/${videoId}`);
-                  }
-                }}
+                onClick={goToStatistics}
                 className="bg-white text-indigo-600 px-8 py-4 rounded-2xl font-semibold hover:bg-gray-50 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-3 mx-auto"
               >
                 <BarChart3 size={24} />
