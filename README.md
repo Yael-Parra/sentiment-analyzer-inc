@@ -44,6 +44,8 @@ The platform supports:
 - WebSite
 - Documentation
 - Presentation
+  
+  https://www.canva.com/design/DAGtHynvdrM/gjhV452aDAtKDeVjKHb_Wg/view?utm_content=DAGtHynvdrM&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h1c65d64807
 ---
 
 ## 🎯 Target Audience
