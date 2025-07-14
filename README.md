@@ -13,6 +13,7 @@
 ## 🧭 Table of Contents
 
 - [📌 Project Overview](#-project-overview)
+- [📎 Useful links](#-useful-links)
 - [🎯 Target Audience](#-target-audience)
 - [⚙️ Features & Limitations](#️-features--limitations)
 - [🚀 Future Improvements](#-future-improvements)
@@ -37,6 +38,12 @@ The platform supports:
 - Sentiment scoring using **pre-trained VADER models** and custom-trained models with **spaCy**
 - Fully dockerized backend/frontend stack, **deployed via Azure**
 
+---
+## 📎 Useful links
+
+- WebSite
+- Documentation
+- Presentation
 ---
 
 ## 🎯 Target Audience
@@ -84,8 +91,9 @@ The platform supports:
 ![Dill](https://img.shields.io/badge/-Dill-6E4C1E)
 ![TQDM](https://img.shields.io/badge/-TQDM-92C63D)
 ![spaCy](https://img.shields.io/badge/-spaCy-09A3D5)
+![Many more](https://img.shields.io/badge/-ManyMore-FFFFFF)
 
-### 🧠 Sentiment Modeling
+### 🧠 Toxicity and Sentiment Modeling
 
 ![VADER](https://img.shields.io/badge/-VADER-6A1B9A)
 ![spaCy](https://img.shields.io/badge/-spaCy-09A3D5)
@@ -99,7 +107,7 @@ The platform supports:
 ![TailwindCSS](https://img.shields.io/badge/-TailwindCSS-06B6D4?logo=tailwindcss&logoColor=white)
 ![Vite](https://img.shields.io/badge/-Vite-646CFF?logo=vite&logoColor=white)
 
-### 🧱 Database & Infra
+### 🧱 Database & Infrastructure
 
 ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?logo=supabase&logoColor=white)
 ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white)
@@ -127,16 +135,17 @@ The platform supports:
 
 ## ✍ Deployment Instructions
 
-1. Run it in your PC with a virtual environment:
-  1. Clone the repository
+1. Clone the repository
      ```
      git clone https://github.com/your-repo/youtube-sentiment-analyzer.git
      cd youtube-sentiment-analyzer
       ```
-  2. Set up your .env file based on .env.example
-  3. You need to have java installed in your PC and ...   
-  4. To run in the terminal:
-       You need to open 2 terminal windows.
+2. Set up your .env file based on .env.example
+
+   1. Run in virtual environment:
+      1.1 You need to have java installed in your PC and ...   
+      1.2. To run in the terminal:
+      1.3 Open 2 terminal windows.
          - In the first terminal, go to the root of the project and run:
          ```
          uvicorn server.main:app --reload
@@ -146,12 +155,13 @@ The platform supports:
          cd client
          npm run dev
          ```
+    2. Run it with Docker:
+      2.1  You need to have docker in your PC 
+      2.2 Build and run the application
+      ```
+      docker-compose up --build
+      ```
 
-2. Run it with Docker:
-  1. Build and run the application
-  ```
-  docker-compose up --build
-  ```
 3. Try it in our website:
   1. Visit:
      ```
@@ -160,7 +170,7 @@ The platform supports:
 
 ---
 ## 👩‍💻 Contributors
-We are a diverse team passionate about emotional analytics, content strategy, and real-time data apps.
+We are AI students with a heart and passion for building better solutions for real problems.
 Feel free to explore, fork, or connect with us for ideas, feedback, or collaborations.
 
 
@@ -171,5 +181,3 @@ Feel free to explore, fork, or connect with us for ideas, feedback, or collabora
 | **Andreina Suescum** | [![GitHub](https://img.shields.io/badge/GitHub-c4302b?logo=github&logoColor=white)](https://github.com/mariasuescum) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andreina-suescum/) |
 | **Yael Parra** | [![GitHub](https://img.shields.io/badge/GitHub-c4302b?logo=github&logoColor=white)](https://github.com/Yael-Parra) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/yael-parra/) |
 | **Maryna Nalyvaiko** | [![GitHub](https://img.shields.io/badge/GitHub-c4302b?logo=github&logoColor=white)](https://github.com/MarynaDRST) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/maryna-nalyvaiko-69745a236/) |
-
-
