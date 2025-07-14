@@ -42,6 +42,9 @@ The platform supports:
 ## 📎 Useful links
 
 - WebSite
+
+  feel-flow.eastus.cloudapp.azure.com
+  
 - Documentation
 - Presentation
   
@@ -186,7 +189,7 @@ The platform supports:
 4. Try it on our website:
     - Visit:
       ```
-      www.
+      http://feel-flow.eastus.cloudapp.azure.com/statistics/lom1D8raoA4
       ```
 
 
