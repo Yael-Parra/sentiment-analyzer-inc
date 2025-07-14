@@ -1,7 +1,7 @@
 import axios from "axios";
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-
+// export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_URL = '/api/';
 // Función para normalizar comentarios (mapear campos del backend al frontend)
 const normalizeComment = (comment) => ({
   ...comment,

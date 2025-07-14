@@ -22,7 +22,11 @@ app.add_middleware(
 def read_root():
     return {"message": "Welcome to the FastAPI server!"}
 
-@app.get("/sentiment-analyzer/all")
+@app.get("/api/")
+def api_health():
+    return {"status": "ok"}
+
+@app.get("/api/sentiment-analyzer/all")
 def get_all_sentiment_analyzer():
     # Recupera TODOS los comentarios analizados de la tabla sentiment_analyzer
 
@@ -45,7 +49,7 @@ def get_all_sentiment_analyzer():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error recuperando comentarios: {str(e)}")
 
-@app.get("/sentiment-analyzer/video/{video_id}")
+@app.get("/api/sentiment-analyzer/video/{video_id}")
 def get_sentiment_analyzer_by_video_id(video_id: str):
      # Recupera comentarios de sentiment_analyzer por video_id específico
    
@@ -70,7 +74,7 @@ def get_sentiment_analyzer_by_video_id(video_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error recuperando comentarios: {str(e)}")
 
-@app.get("/video-statistics/all")
+@app.get("/api/video-statistics/all")
 def get_all_video_statistics():
     # Recupera TODAS las estadísticas de videos de la tabla video_statistics
     try:
@@ -105,7 +109,7 @@ def get_all_video_statistics():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error recuperando estadísticas: {str(e)}")
 
-@app.get("/video-statistics/video/{video_id}")
+@app.get("/api/video-statistics/video/{video_id}")
 def get_video_statistics_by_video_id(video_id: str):
     # Recupera estadísticas de video_statistics por video_id específico
     try:
@@ -128,7 +132,7 @@ def get_video_statistics_by_video_id(video_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error recuperando estadísticas: {str(e)}")
 
-@app.post("/extract-comments/") 
+@app.post("/api/extract-comments/") 
 def extract_comments_endpoint(request: VideoRequest):
     try:
         video_id = extract_video_id(request.url_or_id)
@@ -143,14 +147,14 @@ def extract_comments_endpoint(request: VideoRequest):
         raise HTTPException(status_code=500, detail=f"Error extrayendo comentarios: {str(e)}")
 
 # Endpoint predicción
-@app.post("/CommentAnalyzer/", response_model=PredictionResponse)
+@app.post("/api/CommentAnalyzer/", response_model=PredictionResponse)
 def predict_from_youtube(request: VideoRequest):
     result = predict_pipeline(request.url_or_id, max_comments=request.max_comments)
     return result
 
 
 # Endpoint GET para los gráficos, se traen por video_id:
-@app.get("/stats/")
+@app.get("/api/stats/")
 def get_stats(video_id: str):
     # Recupera estadísticas guardadas para gráficos del frontend
     # NO ejecuta pipeline - solo consulta base de datos
@@ -184,7 +188,7 @@ def get_stats(video_id: str):
         raise HTTPException(status_code=500, detail=f"Error recuperando estadísticas: {str(e)}")
 
 
-@app.delete("/sentiment-analyzer/video/{video_id}")
+@app.delete("/api/sentiment-analyzer/video/{video_id}")
 def delete_sentiment_analyzer_by_video_id(video_id: str):
     """Elimina todos los comentarios guardados de un video"""
     try:
